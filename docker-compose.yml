@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  exporter:
+    build:
+      context: .
+      args:
+        PORT: ${PORT}
+    ports:
+      - "${PORT}:${PORT}"
+    env_file:
+      - .env
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
