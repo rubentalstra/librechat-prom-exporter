@@ -4,26 +4,65 @@
   },
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
-  "iteration": 1679876543210,
   "links": [],
+  "refresh": "15s",
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": ["LibreChat", "Exporter"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "LibreChat Exporter Dashboard",
+  "uid": "librechat-exporter-dashboard",
+  "version": 5,
   "panels": [
     {
-      "datasource": "prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
+      "id": 1,
+      "title": "Overview",
+      "type": "text",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
       },
+      "options": {
+        "mode": "markdown",
+        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics (users, conversations, tokens, etc.). Explore each row for a focused view on different categories."
+      },
+      "datasource": null
+    },
+    {
+      "id": 2,
+      "type": "row",
+      "title": "Basic Counts",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "id": 3,
+      "title": "Basic Counts (Part 1)",
+      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 5
       },
-      "id": 2,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_user_count",
@@ -51,24 +90,35 @@
           "refId": "E"
         }
       ],
-      "title": "Basic Counts (Part 1)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "showPoints": "auto",
+        "showLines": true
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 4,
+      "title": "Basic Counts (Part 2)",
+      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 5
       },
-      "id": 3,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_banner_count",
@@ -96,24 +146,35 @@
           "refId": "E"
         }
       ],
-      "title": "Basic Counts (Part 2)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "showPoints": "auto",
+        "showLines": true
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 5,
+      "title": "Basic Counts (Part 3)",
+      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 13
       },
-      "id": 4,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_message_count",
@@ -136,24 +197,35 @@
           "refId": "D"
         }
       ],
-      "title": "Basic Counts (Part 3)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "showPoints": "auto",
+        "showLines": true
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 6,
+      "title": "Basic Counts (Part 4)",
+      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 13
       },
-      "id": 5,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_prompt_group_count",
@@ -176,24 +248,35 @@
           "refId": "D"
         }
       ],
-      "title": "Basic Counts (Part 4)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "showPoints": "auto",
+        "showLines": true
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 7,
+      "title": "Basic Counts (Part 5)",
+      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 21
       },
-      "id": 6,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_shared_link_count",
@@ -216,24 +299,47 @@
           "refId": "D"
         }
       ],
-      "title": "Basic Counts (Part 5)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "showPoints": "auto",
+        "showLines": true
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Message & Advanced Metrics",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      }
+    },
+    {
+      "id": 9,
+      "title": "Message Metrics (Advanced)",
+      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 30
       },
-      "id": 7,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_message_token_sum",
@@ -252,7 +358,7 @@
         },
         {
           "expr": "librechat_message_with_attachments_count",
-          "legendFormat": "Messages with Attachments",
+          "legendFormat": "Messages w/ Attachments",
           "refId": "D"
         },
         {
@@ -261,24 +367,47 @@
           "refId": "E"
         }
       ],
-      "title": "Message Metrics (Advanced)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "showPoints": "auto",
+        "showLines": true
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Banner & File Metrics",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      }
+    },
+    {
+      "id": 11,
+      "title": "Banner Metrics",
+      "type": "stat",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 39
       },
-      "id": 8,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_active_banner_count",
@@ -286,24 +415,24 @@
           "refId": "A"
         }
       ],
-      "title": "Banner Metrics",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 12,
+      "title": "File Metrics",
+      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 39
       },
-      "id": 9,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_file_total_bytes",
@@ -316,74 +445,125 @@
           "refId": "B"
         }
       ],
-      "title": "File Metrics",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        },
+        "showPoints": "auto",
+        "showLines": true
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "none"
+          "unit": "bytes"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Agent & User Provider Metrics",
+      "collapsed": false,
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 1,
+        "w": 24,
         "x": 0,
-        "y": 40
-      },
-      "id": 10,
-      "targets": [
-        {
-          "expr": "librechat_agent_model_count",
-          "legendFormat": "Agent Model: {{model}}",
-          "refId": "A"
-        }
-      ],
+        "y": 47
+      }
+    },
+    {
+      "id": 14,
       "title": "Agent Model Count",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 40
-      },
-      "id": 11,
-      "targets": [
-        {
-          "expr": "librechat_user_provider_count",
-          "legendFormat": "User Provider: {{provider}}",
-          "refId": "A"
-        }
-      ],
-      "title": "User Provider Count",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "seconds"
-        },
-        "overrides": []
-      },
+      "type": "bargauge",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 48
       },
-      "id": 12,
+      "datasource": "prometheus",
+      "targets": [
+        {
+          "expr": "librechat_agent_model_count",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "showValue": true,
+        "showBar": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 15,
+      "title": "User Provider Count",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "datasource": "prometheus",
+      "targets": [
+        {
+          "expr": "librechat_user_provider_count",
+          "legendFormat": "{{provider}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        },
+        "showValue": true,
+        "showBar": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Session & Prompt Group Metrics",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      }
+    },
+    {
+      "id": 17,
+      "title": "Session Metrics (Gauge)",
+      "type": "gauge",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 56
+      },
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_session_avg_duration",
@@ -391,24 +571,24 @@
           "refId": "A"
         }
       ],
-      "title": "Session Metrics",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
-          "unit": "none"
+          "unit": "seconds"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 18,
+      "title": "Prompt Group Metrics (Gauge)",
+      "type": "gauge",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 48
+        "y": 56
       },
-      "id": 13,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_prompt_group_generations_avg",
@@ -416,24 +596,36 @@
           "refId": "A"
         }
       ],
-      "title": "Prompt Group Metrics",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 19,
+      "type": "row",
+      "title": "Prompt & Tool Call Metrics by Type",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 63
+      }
+    },
+    {
+      "id": 20,
+      "title": "Prompt Count by Type",
+      "type": "table",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 56
+        "y": 64
       },
-      "id": 14,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_prompt_count_by_type",
@@ -441,24 +633,24 @@
           "refId": "A"
         }
       ],
-      "title": "Prompt Count by Type",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 21,
+      "title": "Tool Call Count by Tool",
+      "type": "table",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 56
+        "y": 64
       },
-      "id": 15,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_tool_call_count_by_tool",
@@ -466,24 +658,36 @@
           "refId": "A"
         }
       ],
-      "title": "Tool Call Count by Tool",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 22,
+      "type": "row",
+      "title": "Conversation & Transaction Metrics",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      }
+    },
+    {
+      "id": 23,
+      "title": "Conversation Metrics",
+      "type": "timeseries",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 64
+        "y": 73
       },
-      "id": 16,
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_conversation_message_avg",
@@ -491,54 +695,77 @@
           "refId": "A"
         }
       ],
-      "title": "Conversation Metrics",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyUSD"
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 64
-      },
-      "id": 17,
-      "targets": [
-        {
-          "expr": "librechat_transaction_cost_sum",
-          "legendFormat": "Transaction Cost Sum ({{tokenType}})",
-          "refId": "A"
+        "tooltip": {
+          "mode": "single"
         },
-        {
-          "expr": "librechat_transaction_cost_avg",
-          "legendFormat": "Transaction Cost Avg ({{tokenType}})",
-          "refId": "B"
-        }
-      ],
-      "title": "Transaction Costs",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "prometheus",
+        "showPoints": "auto",
+        "showLines": true
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      },
+      }
+    },
+    {
+      "id": 24,
+      "title": "Transaction Token Usage",
+      "type": "table",
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 72
+        "x": 12,
+        "y": 73
       },
-      "id": 18,
+      "datasource": "prometheus",
+      "targets": [
+        {
+          "expr": "librechat_transaction_cost_sum",
+          "legendFormat": "Token Sum ({{tokenType}})",
+          "refId": "A"
+        },
+        {
+          "expr": "librechat_transaction_cost_avg",
+          "legendFormat": "Token Avg ({{tokenType}})",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "Action Metrics",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 81
+      }
+    },
+    {
+      "id": 26,
+      "title": "Action Metrics by Type",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 82
+      },
+      "datasource": "prometheus",
       "targets": [
         {
           "expr": "librechat_action_count_by_type",
@@ -546,24 +773,12 @@
           "refId": "A"
         }
       ],
-      "title": "Action Metrics",
-      "type": "timeseries"
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      }
     }
-  ],
-  "refresh": "15s",
-  "schemaVersion": 37,
-  "style": "dark",
-  "tags": ["LibreChat", "Exporter"],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "LibreChat Exporter Dashboard",
-  "uid": "librechat-exporter-dashboard",
-  "version": 1
+  ]
 }
