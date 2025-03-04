@@ -3,19 +3,31 @@
     "list": []
   },
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
   "links": [],
-  "refresh": "15s",
-  "schemaVersion": 37,
+  "refresh": "auto",
+  "schemaVersion": 40,
   "style": "dark",
   "tags": [
     "LibreChat",
     "Exporter"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "type": "datasource",
+        "name": "prometheusDS",
+        "label": "Data Source",
+        "query": "prometheus",
+        "hide": 0,
+        "current": {
+          "text": "Prometheus",
+          "value": "Prometheus"
+        }
+      }
+    ]
   },
   "time": {
     "from": "now-6h",
@@ -25,586 +37,1228 @@
   "timezone": "",
   "title": "LibreChat Exporter Dashboard",
   "uid": "librechat-exporter-dashboard",
-  "version": 6,
+  "version": 3,
+  "weekStart": "",
   "panels": [
     {
-      "id": 1,
       "type": "text",
       "title": "Overview",
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
-      "options": {
-        "mode": "markdown",
-        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics (users, conversations, tokens, transactions, etc.).\n\n- **Key Totals & Basic Metrics**: High-level stats for users, messages, etc.\n- **Message & File Metrics**: Deeper look into message tokens, errors, file sizes.\n- **Agent & Provider**: Distribution of agent models and user providers.\n- **Sessions & Prompts**: A quick glance at average session durations and prompt groups.\n- **Actions & Tools**: Tables for actions and tool usage.\n\nUse the rows below to navigate to each category."
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
       },
-      "datasource": null
+      "id": 1,
+      "options": {
+        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics (users, conversations, tokens, transactions, etc.).\n\n- **High-level Metrics**: Active users, usage stats, and quick totals.\n- **Message & File Metrics**: Token sums, error counts, and file usage.\n- **Agent & Provider Distribution**: Bar gauges for models and providers.\n- **Session & Prompt**: Average durations and prompt group usage.\n- **Actions & Tools**: Tabular breakdown.\n- **Deeper Insights**: Trends over time.\n\nUse the rows below for deeper analysis. Keep an eye on descriptions in the panel tooltips.",
+        "mode": "markdown",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        }
+      },
+      "description": "Dashboard introduction and summary"
     },
     {
-      "id": 2,
+      "collapsed": false,
+      "type": "row",
+      "title": "Active Users",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 8,
+      "panels": [],
+      "description": "Current number of users active in the last 5 minutes"
+    },
+    {
+      "type": "timeseries",
+      "title": "LibreChat Active Users (Last 6h)",
+      "description": "Displays the number of active users over time (metric: librechat_active_users).",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 118,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_active_users",
+          "legendFormat": "Active Users",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "collapsed": false,
       "type": "row",
       "title": "Key Totals & Basic Metrics",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 4 }
+      "description": "High-level totals for users, agents, conversations, sessions, and more.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 2,
+      "panels": []
     },
     {
-      "id": 101,
       "type": "stat",
       "title": "Users & Agents",
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 5 },
-      "datasource": "prometheus",
+      "description": "Counts of total users, agents, assistants, and roles.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 14
+      },
+      "id": 101,
+      "datasource": "$prometheusDS",
       "targets": [
         {
           "expr": "librechat_user_count",
           "legendFormat": "User Count",
-          "refId": "A"
+          "refId": "A",
+          "datasource": "$prometheusDS"
         },
         {
           "expr": "librechat_agent_count",
           "legendFormat": "Agent Count",
-          "refId": "B"
+          "refId": "B",
+          "datasource": "$prometheusDS"
         },
         {
           "expr": "librechat_assistant_count",
           "legendFormat": "Assistant Count",
-          "refId": "C"
+          "refId": "C",
+          "datasource": "$prometheusDS"
         },
         {
           "expr": "librechat_role_count",
           "legendFormat": "Role Count",
-          "refId": "D"
+          "refId": "D",
+          "datasource": "$prometheusDS"
         }
       ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
       "options": {
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
           "values": false
         },
+        "showPercentChange": false,
         "textMode": "auto",
-        "layout": "horizontal"
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Conversations & Sessions",
+      "description": "High-level totals for conversations, tags, sessions, and projects.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 14
       },
+      "id": 102,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_conversation_count",
+          "legendFormat": "Conversation Count",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_conversation_tag_count",
+          "legendFormat": "Conversation Tag Count",
+          "refId": "B",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_session_count",
+          "legendFormat": "Session Count",
+          "refId": "C",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_project_count",
+          "legendFormat": "Project Count",
+          "refId": "D",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Messages & Tools",
+      "description": "Totals for messages, tool calls, plugin auth, and actions.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "id": 103,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_message_count",
+          "legendFormat": "Message Count",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_tool_call_count",
+          "legendFormat": "Tool Call Count",
+          "refId": "B",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_plugin_auth_count",
+          "legendFormat": "Plugin Auth Count",
+          "refId": "C",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_action_count",
+          "legendFormat": "Action Count",
+          "refId": "D",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Files & Banners",
+      "description": "Totals for files, banners, and active banners.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 20
+      },
+      "id": 104,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_file_count",
+          "legendFormat": "File Count",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_banner_count",
+          "legendFormat": "Banner Count",
+          "refId": "B",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_active_banner_count",
+          "legendFormat": "Active Banners",
+          "refId": "C",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Transactions & Tokens",
+      "description": "Total counts for transactions, tokens, and balances.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 20
+      },
+      "id": 105,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_transaction_count",
+          "legendFormat": "Transaction Count",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_token_count",
+          "legendFormat": "Token Count",
+          "refId": "B",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_balance_count",
+          "legendFormat": "Balance Count",
+          "refId": "C",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Prompts & Presets",
+      "description": "Counts for prompts, prompt groups, and presets.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "id": 106,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_prompt_count",
+          "legendFormat": "Prompt Count",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_prompt_group_count",
+          "legendFormat": "Prompt Group Count",
+          "refId": "B",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_preset_count",
+          "legendFormat": "Preset Count",
+          "refId": "C",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "collapsed": false,
+      "type": "row",
+      "title": "Message & File Metrics",
+      "description": "Advanced stats related to message tokens, errors, attachments, and file sizes.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "id": 3,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Advanced Message Metrics",
+      "description": "Token usage (sum/avg), error messages, plugin usage %, and attachments.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "id": 107,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_message_token_sum",
+          "legendFormat": "Token Sum",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_message_token_avg",
+          "legendFormat": "Token Avg",
+          "refId": "B",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_error_message_count",
+          "legendFormat": "Error Msg Count",
+          "refId": "C",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_message_with_attachments_count",
+          "legendFormat": "Msg w/ Attachments",
+          "refId": "D",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_message_plugin_usage_percent",
+          "legendFormat": "Plugin Usage (%)",
+          "refId": "E",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Plugin Usage (%)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "File Size Metrics",
+      "description": "Total and average file sizes (in bytes).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "id": 108,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_file_total_bytes",
+          "legendFormat": "Total File Bytes",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        },
+        {
+          "expr": "librechat_file_avg_bytes",
+          "legendFormat": "Avg File Size",
+          "refId": "B",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "collapsed": false,
+      "type": "row",
+      "title": "Agent & User Provider Distributions",
+      "description": "Bar gauge breakdown of agent models and user providers.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 4,
+      "panels": []
+    },
+    {
+      "type": "bargauge",
+      "title": "Agent Model Count",
+      "description": "Distribution of agent models (metric: librechat_agent_model_count).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 109,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_agent_model_count",
+          "legendFormat": "{{model}}",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "showValue": true,
+        "valueMode": "color",
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "User Provider Count",
+      "description": "Distribution of user providers (metric: librechat_user_provider_count).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 110,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_user_provider_count",
+          "legendFormat": "{{provider}}",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "showValue": true,
+        "valueMode": "color",
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "type": "row",
+      "title": "Session & Prompt Performance",
+      "description": "Average session durations and prompt group generation stats.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 5,
+      "panels": []
+    },
+    {
+      "type": "gauge",
+      "title": "Session Avg Duration",
+      "description": "Average session duration in seconds (librechat_session_avg_duration).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
+      "id": 111,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_session_avg_duration",
+          "legendFormat": "Avg Session Duration",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "sizing": "auto",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      }
+    },
+    {
+      "type": "gauge",
+      "title": "Prompt Group Generations (Avg)",
+      "description": "Average number of generations per prompt group (librechat_prompt_group_generations_avg).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 45
+      },
+      "id": 112,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_prompt_group_generations_avg",
+          "legendFormat": "Avg Generations",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "unit": "none"
         },
         "overrides": []
-      }
-    },
-    {
-      "id": 102,
-      "type": "stat",
-      "title": "Conversations & Sessions",
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 5 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_conversation_count",
-          "legendFormat": "Conversation Count",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_conversation_tag_count",
-          "legendFormat": "Conversation Tag Count",
-          "refId": "B"
-        },
-        {
-          "expr": "librechat_session_count",
-          "legendFormat": "Session Count",
-          "refId": "C"
-        },
-        {
-          "expr": "librechat_project_count",
-          "legendFormat": "Project Count",
-          "refId": "D"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "values": false
-        },
-        "textMode": "auto",
-        "layout": "horizontal"
       },
-      "fieldConfig": {
-        "defaults": { "unit": "none" },
-        "overrides": []
-      }
-    },
-    {
-      "id": 103,
-      "type": "stat",
-      "title": "Messages & Tools",
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 5 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_message_count",
-          "legendFormat": "Message Count",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_tool_call_count",
-          "legendFormat": "Tool Call Count",
-          "refId": "B"
-        },
-        {
-          "expr": "librechat_plugin_auth_count",
-          "legendFormat": "Plugin Auth Count",
-          "refId": "C"
-        },
-        {
-          "expr": "librechat_action_count",
-          "legendFormat": "Action Count",
-          "refId": "D"
-        }
-      ],
       "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "values": false
-        },
-        "textMode": "auto",
-        "layout": "horizontal"
-      },
-      "fieldConfig": {
-        "defaults": { "unit": "none" },
-        "overrides": []
-      }
-    },
-    {
-      "id": 104,
-      "type": "stat",
-      "title": "Files & Banners",
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 11 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_file_count",
-          "legendFormat": "File Count",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_banner_count",
-          "legendFormat": "Banner Count",
-          "refId": "B"
-        },
-        {
-          "expr": "librechat_active_banner_count",
-          "legendFormat": "Active Banners",
-          "refId": "C"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "values": false
-        },
-        "textMode": "auto",
-        "layout": "horizontal"
-      },
-      "fieldConfig": {
-        "defaults": { "unit": "none" },
-        "overrides": []
-      }
-    },
-    {
-      "id": 105,
-      "type": "stat",
-      "title": "Transactions & Tokens",
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 11 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_transaction_count",
-          "legendFormat": "Transaction Count",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_token_count",
-          "legendFormat": "Token Count",
-          "refId": "B"
-        },
-        {
-          "expr": "librechat_balance_count",
-          "legendFormat": "Balance Count",
-          "refId": "C"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "values": false
-        },
-        "textMode": "auto",
-        "layout": "horizontal"
-      },
-      "fieldConfig": {
-        "defaults": { "unit": "none" },
-        "overrides": []
-      }
-    },
-    {
-      "id": 106,
-      "type": "stat",
-      "title": "Prompts & Presets",
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 11 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_prompt_count",
-          "legendFormat": "Prompt Count",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_prompt_group_count",
-          "legendFormat": "Prompt Group Count",
-          "refId": "B"
-        },
-        {
-          "expr": "librechat_preset_count",
-          "legendFormat": "Preset Count",
-          "refId": "C"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "values": false
-        },
-        "textMode": "auto",
-        "layout": "horizontal"
-      },
-      "fieldConfig": {
-        "defaults": { "unit": "none" },
-        "overrides": []
-      }
-    },
-    {
-      "id": 3,
-      "type": "row",
-      "title": "Message & File Metrics",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 }
-    },
-    {
-      "id": 107,
-      "type": "stat",
-      "title": "Advanced Message Metrics",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_message_token_sum",
-          "legendFormat": "Token Sum",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_message_token_avg",
-          "legendFormat": "Token Avg",
-          "refId": "B"
-        },
-        {
-          "expr": "librechat_error_message_count",
-          "legendFormat": "Error Msg Count",
-          "refId": "C"
-        },
-        {
-          "expr": "librechat_message_with_attachments_count",
-          "legendFormat": "Msg w/ Attachments",
-          "refId": "D"
-        },
-        {
-          "expr": "librechat_message_plugin_usage_percent",
-          "legendFormat": "Plugin Usage (%)",
-          "refId": "E"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "values": false
-        },
-        "textMode": "auto",
-        "layout": "horizontal"
-      },
-      "fieldConfig": {
-        "defaults": { "unit": "none" },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Plugin Usage (%)" },
-            "properties": [
-              { "id": "unit", "value": "percent" }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": 108,
-      "type": "stat",
-      "title": "File Size Metrics",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_file_total_bytes",
-          "legendFormat": "Total File Bytes",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_file_avg_bytes",
-          "legendFormat": "Avg File Size",
-          "refId": "B"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "values": false
-        },
-        "textMode": "auto",
-        "layout": "horizontal"
-      },
-      "fieldConfig": {
-        "defaults": { "unit": "bytes" },
-        "overrides": []
-      }
-    },
-    {
-      "id": 4,
-      "type": "row",
-      "title": "Agent & User Provider Distributions",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 }
-    },
-    {
-      "id": 109,
-      "title": "Agent Model Count",
-      "type": "bargauge",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_agent_model_count",
-          "legendFormat": "{{model}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "orientation": "horizontal",
-        "showUnfilled": true,
+        "orientation": "auto",
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "sizing": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "showValue": true,
-        "showBar": true
-      },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      }
-    },
-    {
-      "id": 110,
-      "title": "User Provider Count",
-      "type": "bargauge",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_user_provider_count",
-          "legendFormat": "{{provider}}",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "showValue": true,
-        "showBar": true
-      },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      }
-    },
-    {
-      "id": 5,
-      "type": "row",
-      "title": "Session & Prompt Performance",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 }
-    },
-    {
-      "id": 111,
-      "title": "Session Avg Duration",
-      "type": "gauge",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_session_avg_duration",
-          "legendFormat": "Avg Session Duration",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "s" },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
         },
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       }
     },
     {
-      "id": 112,
-      "title": "Prompt Group Generations (Avg)",
-      "type": "gauge",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
-      "datasource": "prometheus",
-      "targets": [
-        {
-          "expr": "librechat_prompt_group_generations_avg",
-          "legendFormat": "Avg Generations",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "none" },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"]
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      }
-    },
-    {
-      "id": 6,
+      "collapsed": false,
       "type": "row",
       "title": "Actions & Tools by Type",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 }
+      "description": "Tabular counts of actions by type, prompts by type, and tool calls by tool.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "id": 6,
+      "panels": []
     },
     {
-      "id": 113,
       "type": "table",
       "title": "Action Count by Type",
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 45 },
-      "datasource": "prometheus",
+      "description": "Breakdown of actions grouped by type (metric: librechat_action_count_by_type).",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 54
+      },
+      "id": 113,
+      "datasource": "$prometheusDS",
       "targets": [
         {
           "expr": "librechat_action_count_by_type",
           "legendFormat": "Actions ({{type}})",
-          "refId": "A"
+          "refId": "A",
+          "datasource": "$prometheusDS"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "none" },
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
         "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        }
       }
     },
     {
-      "id": 114,
       "type": "table",
       "title": "Prompt Count by Type",
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 45 },
-      "datasource": "prometheus",
+      "description": "Breakdown of prompts grouped by type (metric: librechat_prompt_count_by_type).",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 54
+      },
+      "id": 114,
+      "datasource": "$prometheusDS",
       "targets": [
         {
           "expr": "librechat_prompt_count_by_type",
           "legendFormat": "Prompts ({{type}})",
-          "refId": "A"
+          "refId": "A",
+          "datasource": "$prometheusDS"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "none" },
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
         "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        }
       }
     },
     {
-      "id": 115,
       "type": "table",
       "title": "Tool Call Count by Tool",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 45 },
-      "datasource": "prometheus",
+      "description": "Counts of tool calls by toolId (metric: librechat_tool_call_count_by_tool).",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 54
+      },
+      "id": 115,
+      "datasource": "$prometheusDS",
       "targets": [
         {
           "expr": "librechat_tool_call_count_by_tool",
           "legendFormat": "Tool Calls ({{toolId}})",
-          "refId": "A"
+          "refId": "A",
+          "datasource": "$prometheusDS"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "none" },
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
         "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        }
       }
     },
     {
-      "id": 7,
+      "collapsed": false,
       "type": "row",
       "title": "Conversation & Transaction Insights",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 53 }
+      "description": "Conversation message distribution over time and transaction token usage breakdowns.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 7,
+      "panels": []
     },
     {
-      "id": 116,
       "type": "timeseries",
       "title": "Avg Messages per Conversation (Over Time)",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 54 },
-      "datasource": "prometheus",
+      "description": "Plots average messages per conversation over time (librechat_conversation_message_avg).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 63
+      },
+      "id": 116,
+      "datasource": "$prometheusDS",
       "targets": [
         {
           "expr": "librechat_conversation_message_avg",
           "legendFormat": "Avg Messages/Conversation",
-          "refId": "A"
+          "refId": "A",
+          "datasource": "$prometheusDS"
         }
       ],
-      "options": {
-        "legend": { "displayMode": "table", "placement": "bottom" },
-        "tooltip": { "mode": "single" },
-        "showPoints": "auto",
-        "showLines": true
-      },
       "fieldConfig": {
-        "defaults": { "unit": "none" },
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
         "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "showPoints": "auto",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       }
     },
-
     {
-      "id": 117,
       "type": "table",
       "title": "Transaction Token Usage",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 54 },
-      "datasource": "prometheus",
+      "description": "Shows sum and average token usage by tokenType (librechat_transaction_cost_sum / librechat_transaction_cost_avg).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 63
+      },
+      "id": 117,
+      "datasource": "$prometheusDS",
       "targets": [
         {
           "expr": "librechat_transaction_cost_sum",
           "legendFormat": "Token Sum ({{tokenType}})",
-          "refId": "A"
+          "refId": "A",
+          "datasource": "$prometheusDS"
         },
         {
           "expr": "librechat_transaction_cost_avg",
           "legendFormat": "Token Avg ({{tokenType}})",
-          "refId": "B"
+          "refId": "B",
+          "datasource": "$prometheusDS"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "none" },
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
         "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        }
       }
     }
   ]

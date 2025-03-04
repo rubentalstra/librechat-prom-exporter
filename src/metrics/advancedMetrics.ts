@@ -66,6 +66,10 @@ export const advancedGauges = {
         help: 'Count of users by provider',
         labelNames: ['provider']
     }),
+    activeUserCount: new client.Gauge({
+        name: 'librechat_active_users',
+        help: 'Number of active users within the last 5 minutes'
+    }),
 
     // Session metrics
     sessionAvgDuration: new client.Gauge({
@@ -180,6 +184,15 @@ export async function updateAdvancedMetrics(): Promise<void> {
             const provider = result._id || 'unknown';
             advancedGauges.userProviderCount.set({ provider }, result.count);
         }
+        // Active users within the last 5 minutes
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const activeUserAgg = await Message.aggregate([
+            { $match: { createdAt: { $gte: fiveMinutesAgo } } },
+            { $group: { _id: '$user' } },
+            { $count: 'activeUsers' }
+        ]);
+        const activeUsers = activeUserAgg.length > 0 ? activeUserAgg[0].activeUsers : 0;
+        advancedGauges.activeUserCount.set(activeUsers);
 
         // Average session duration (expiration - createdAt) in seconds
         const sessionAgg = await Session.aggregate([
