@@ -30,7 +30,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {},
@@ -51,7 +51,7 @@
       },
       "id": 1,
       "options": {
-        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics (users, conversations, tokens, transactions, etc.).\n\n- **High-level Metrics**: Active users, usage stats, and quick totals.\n- **Message & File Metrics**: Token sums, error counts, and file usage.\n- **Agent & Provider Distribution**: Bar gauges for models and providers.\n- **Session & Prompt**: Average durations and prompt group usage.\n- **Actions & Tools**: Tabular breakdown.\n- **Deeper Insights**: Trends over time.\n\nUse the rows below for deeper analysis. Keep an eye on descriptions in the panel tooltips.",
+        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics including users, conversations, tokens, transactions, and more.\n\n- **High-level Metrics**: Active users, usage stats, and quick totals.\n- **Message & File Metrics**: Token sums, error counts, and file usage.\n- **Agent & Provider Distribution**: Bar gauges for models and providers.\n- **Session & Prompt Performance**: Average durations and prompt group usage.\n- **Actions & Tools**: Tabular breakdown.\n- **Conversation & Transaction Insights**: Trends over time.\n\nUse the rows below for deeper analysis. Hover on panels for details.",
         "mode": "markdown",
         "code": {
           "language": "plaintext",
@@ -64,7 +64,7 @@
     {
       "collapsed": false,
       "type": "row",
-      "title": "Active Users",
+      "title": "👤 User Activity",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -73,11 +73,11 @@
       },
       "id": 8,
       "panels": [],
-      "description": "Current number of users active in the last 5 minutes"
+      "description": "Current active users metrics"
     },
     {
       "type": "timeseries",
-      "title": "LibreChat Active Users (Last 6h)",
+      "title": "LibreChat Active Users (Last 24h)",
       "description": "Displays the number of active users over time (metric: librechat_active_users).",
       "gridPos": {
         "h": 8,
@@ -144,7 +144,7 @@
     {
       "collapsed": false,
       "type": "row",
-      "title": "Key Totals & Basic Metrics",
+      "title": "📊 Key Totals & Basic Metrics",
       "description": "High-level totals for users, agents, conversations, sessions, and more.",
       "gridPos": {
         "h": 1,
@@ -234,7 +234,7 @@
     {
       "type": "stat",
       "title": "Conversations & Sessions",
-      "description": "High-level totals for conversations, tags, sessions, and projects.",
+      "description": "Totals for conversations, tags, sessions, and projects.",
       "gridPos": {
         "h": 6,
         "w": 8,
@@ -453,7 +453,7 @@
     {
       "type": "stat",
       "title": "Transactions & Tokens",
-      "description": "Total counts for transactions, tokens, and balances.",
+      "description": "Counts for transactions, tokens, and balances.",
       "gridPos": {
         "h": 6,
         "w": 8,
@@ -591,8 +591,8 @@
     {
       "collapsed": false,
       "type": "row",
-      "title": "Message & File Metrics",
-      "description": "Advanced stats related to message tokens, errors, attachments, and file sizes.",
+      "title": "📨 Message & File Metrics",
+      "description": "Advanced stats on message tokens, errors, attachments, and file sizes.",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -736,8 +736,8 @@
     {
       "collapsed": false,
       "type": "row",
-      "title": "Agent & User Provider Distributions",
-      "description": "Bar gauge breakdown of agent models and user providers.",
+      "title": "👥 Agent & User Provider Distributions",
+      "description": "Pie chart breakdown of agent models and user providers.",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -748,7 +748,7 @@
       "panels": []
     },
     {
-      "type": "bargauge",
+      "type": "piechart",
       "title": "Agent Model Count",
       "description": "Distribution of agent models (metric: librechat_agent_model_count).",
       "gridPos": {
@@ -772,28 +772,15 @@
         "overrides": []
       },
       "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "showValue": true,
-        "valueMode": "color",
+        "pieType": "pie",
         "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": []
-        },
-        "reduceOptions": {
-          "values": false,
-          "fields": "",
-          "calcs": [
-            "lastNotNull"
-          ]
+          "show": true,
+          "placement": "bottom"
         }
       }
     },
     {
-      "type": "bargauge",
+      "type": "piechart",
       "title": "User Provider Count",
       "description": "Distribution of user providers (metric: librechat_user_provider_count).",
       "gridPos": {
@@ -817,30 +804,17 @@
         "overrides": []
       },
       "options": {
-        "displayMode": "gradient",
-        "orientation": "horizontal",
-        "showUnfilled": true,
-        "showValue": true,
-        "valueMode": "color",
+        "pieType": "pie",
         "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom",
-          "calcs": []
-        },
-        "reduceOptions": {
-          "values": false,
-          "fields": "",
-          "calcs": [
-            "lastNotNull"
-          ]
+          "show": true,
+          "placement": "bottom"
         }
       }
     },
     {
       "collapsed": false,
       "type": "row",
-      "title": "Session & Prompt Performance",
+      "title": "⏱️ Session & Prompt Performance",
       "description": "Average session durations and prompt group generation stats.",
       "gridPos": {
         "h": 1,
@@ -852,7 +826,7 @@
       "panels": []
     },
     {
-      "type": "gauge",
+      "type": "stat",
       "title": "Session Avg Duration",
       "description": "Average session duration in seconds (librechat_session_avg_duration).",
       "gridPos": {
@@ -878,23 +852,19 @@
         "overrides": []
       },
       "options": {
-        "orientation": "auto",
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "sizing": "auto",
+        "textMode": "value",
+        "colorMode": "value",
         "reduceOptions": {
-          "values": false,
-          "fields": "",
           "calcs": [
             "lastNotNull"
-          ]
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+          ],
+          "fields": "",
+          "values": false
+        }
       }
     },
     {
-      "type": "gauge",
+      "type": "stat",
       "title": "Prompt Group Generations (Avg)",
       "description": "Average number of generations per prompt group (librechat_prompt_group_generations_avg).",
       "gridPos": {
@@ -920,26 +890,22 @@
         "overrides": []
       },
       "options": {
-        "orientation": "auto",
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "sizing": "auto",
+        "textMode": "value",
+        "colorMode": "value",
         "reduceOptions": {
-          "values": false,
-          "fields": "",
           "calcs": [
             "lastNotNull"
-          ]
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
+          ],
+          "fields": "",
+          "values": false
+        }
       }
     },
     {
       "collapsed": false,
       "type": "row",
-      "title": "Actions & Tools by Type",
-      "description": "Tabular counts of actions by type, prompts by type, and tool calls by tool.",
+      "title": "⚙️ Actions & Tools by Type",
+      "description": "Bar chart counts of actions by type, prompts by type, and tool calls by tool.",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -950,7 +916,7 @@
       "panels": []
     },
     {
-      "type": "table",
+      "type": "barchart",
       "title": "Action Count by Type",
       "description": "Breakdown of actions grouped by type (metric: librechat_action_count_by_type).",
       "gridPos": {
@@ -971,43 +937,20 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "unit": "none"
         },
         "overrides": []
       },
       "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "reducer": [
-            "sum"
-          ],
-          "show": false
+        "orientation": "vertical",
+        "legend": {
+          "show": true,
+          "placement": "bottom"
         }
       }
     },
     {
-      "type": "table",
+      "type": "barchart",
       "title": "Prompt Count by Type",
       "description": "Breakdown of prompts grouped by type (metric: librechat_prompt_count_by_type).",
       "gridPos": {
@@ -1028,43 +971,20 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "unit": "none"
         },
         "overrides": []
       },
       "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "reducer": [
-            "sum"
-          ],
-          "show": false
+        "orientation": "vertical",
+        "legend": {
+          "show": true,
+          "placement": "bottom"
         }
       }
     },
     {
-      "type": "table",
+      "type": "barchart",
       "title": "Tool Call Count by Tool",
       "description": "Counts of tool calls by toolId (metric: librechat_tool_call_count_by_tool).",
       "gridPos": {
@@ -1085,46 +1005,23 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "unit": "none"
         },
         "overrides": []
       },
       "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "reducer": [
-            "sum"
-          ],
-          "show": false
+        "orientation": "vertical",
+        "legend": {
+          "show": true,
+          "placement": "bottom"
         }
       }
     },
     {
       "collapsed": false,
       "type": "row",
-      "title": "Conversation & Transaction Insights",
-      "description": "Conversation message distribution over time and transaction token usage breakdowns.",
+      "title": "💬 Conversation & Transaction Insights",
+      "description": "Conversation message trends and token usage breakdowns.",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1137,7 +1034,7 @@
     {
       "type": "timeseries",
       "title": "Avg Messages per Conversation (Over Time)",
-      "description": "Plots average messages per conversation over time (librechat_conversation_message_avg).",
+      "description": "Plots average messages per conversation over time (metric: librechat_conversation_message_avg).",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1166,19 +1063,6 @@
             "lineWidth": 1,
             "pointSize": 5,
             "showPoints": "auto"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
           }
         },
         "overrides": []
@@ -1187,8 +1071,7 @@
         "legend": {
           "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true,
-          "calcs": []
+          "showLegend": true
         },
         "showPoints": "auto",
         "tooltip": {
@@ -1200,7 +1083,7 @@
     {
       "type": "table",
       "title": "Transaction Token Usage",
-      "description": "Shows sum and average token usage by tokenType (librechat_transaction_cost_sum / librechat_transaction_cost_avg).",
+      "description": "Shows sum and average token usage by tokenType (metrics: librechat_transaction_cost_sum / librechat_transaction_cost_avg).",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1258,6 +1141,91 @@
             "sum"
           ],
           "show": false
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "type": "row",
+      "title": "🤖 Deployed Models Metrics",
+      "description": "Metrics for deployed agent models.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 71
+      },
+      "id": 120,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Total Deployed Model Names",
+      "description": "Total number of distinct deployed agent model names (metric: librechat_deployed_model_names_count).",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 72
+      },
+      "id": 121,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_deployed_model_names_count",
+          "legendFormat": "Total Models",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Deployed Model Usage Count",
+      "description": "Usage count for each deployed agent model (metric: librechat_deployed_model_usage_count).",
+      "gridPos": {
+        "h": 6,
+        "w": 16,
+        "x": 8,
+        "y": 72
+      },
+      "id": 122,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_deployed_model_usage_count",
+          "legendFormat": "{{model}}",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "legend": {
+          "show": true,
+          "placement": "bottom"
         }
       }
     }

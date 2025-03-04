@@ -121,6 +121,17 @@ export const advancedGauges = {
         help: 'Count of actions by type',
         labelNames: ['type']
     }),
+
+    // Deployed models metrics (using the Message model and Agent lookup)
+    deployedModelUsageCount: new client.Gauge({
+        name: 'librechat_deployed_model_usage_count',
+        help: 'Usage count for each deployed agent model as indicated by the Message model (using agent name)',
+        labelNames: ['model']
+    }),
+    deployedModelNamesCount: new client.Gauge({
+        name: 'librechat_deployed_model_names_count',
+        help: 'Total number of distinct deployed agent model names found in messages'
+    }),
 };
 
 export async function updateAdvancedMetrics(): Promise<void> {
@@ -165,7 +176,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.fileTotalBytes.set(fileBytesAgg[0]?.totalBytes || 0);
         advancedGauges.fileAvgBytes.set(fileBytesAgg[0]?.avgBytes || 0);
 
-        // Group agents by model
+        // Group agents by model (using the agent model field)
         const agentModelAgg = await Agent.aggregate([
             { $group: { _id: '$model', count: { $sum: 1 } } }
         ]);
@@ -184,6 +195,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             const provider = result._id || 'unknown';
             advancedGauges.userProviderCount.set({ provider }, result.count);
         }
+
         // Active users within the last 5 minutes
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         const activeUserAgg = await Message.aggregate([
@@ -255,6 +267,39 @@ export async function updateAdvancedMetrics(): Promise<void> {
             const type = result._id || 'unknown';
             advancedGauges.actionCountByType.set({ type }, result.count);
         }
+
+        // Deployed models metrics using the Message model
+        // Group messages by their "model" field (which stores the agent id)
+        const deployedModelsAgg = await Message.aggregate([
+            { $match: { model: { $ne: null } } },
+            { $group: { _id: '$model', count: { $sum: 1 } } }
+        ]);
+        // Get the list of agent IDs from the aggregation result
+        const agentIds = deployedModelsAgg.map(result => result._id);
+        // Query Agent collection to get their names based on the agent id field
+        const agents = await Agent.find({ id: { $in: agentIds } });
+        const agentMap = new Map<string, string>();
+        agents.forEach(agent => {
+            // Use agent.name if available; otherwise fallback to agent.id
+            agentMap.set(agent.id, agent.name ? agent.name : agent.id);
+        });
+        advancedGauges.deployedModelUsageCount.reset();
+        for (const result of deployedModelsAgg) {
+            const agentId = result._id;
+            // If the agentId starts with "agent_" and is not found in the agent table, skip it.
+            if (agentId.startsWith("agent_") && !agentMap.has(agentId)) {
+                continue;
+            }
+            // Use the name from the agent map if available; otherwise fallback to the agentId.
+            const displayName = agentMap.get(agentId) || agentId;
+            advancedGauges.deployedModelUsageCount.set({ model: displayName }, result.count);
+        }
+        // Also count the total number of distinct deployed model names.
+        const distinctModelsAgg = await Message.aggregate([
+            { $match: { model: { $ne: null } } },
+            { $group: { _id: '$model' } }
+        ]);
+        advancedGauges.deployedModelNamesCount.set(distinctModelsAgg.length);
 
         console.log('Advanced metrics updated.');
     } catch (error) {
