@@ -1034,7 +1034,7 @@
     {
       "type": "timeseries",
       "title": "Avg Messages per Conversation (Over Time)",
-      "description": "Plots average messages per conversation over time (metric: librechat_conversation_message_avg).",
+      "description": "Displays average messages per conversation as a bar chart (metric: librechat_conversation_message_avg).",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1047,8 +1047,7 @@
         {
           "expr": "librechat_conversation_message_avg",
           "legendFormat": "Avg Messages/Conversation",
-          "refId": "A",
-          "datasource": "$prometheusDS"
+          "refId": "A"
         }
       ],
       "fieldConfig": {
@@ -1058,11 +1057,12 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "drawStyle": "line",
+            "drawStyle": "bars",
+            "barWidth": 0.8,
             "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 5,
-            "showPoints": "auto"
+            "pointSize": 0,
+            "showPoints": "never"
           }
         },
         "overrides": []
@@ -1073,7 +1073,6 @@
           "placement": "bottom",
           "showLegend": true
         },
-        "showPoints": "auto",
         "tooltip": {
           "mode": "single",
           "sort": "none"
@@ -1081,9 +1080,9 @@
       }
     },
     {
-      "type": "table",
+      "type": "bargauge",
       "title": "Transaction Token Usage",
-      "description": "Shows sum and average token usage by tokenType (metrics: librechat_transaction_cost_sum / librechat_transaction_cost_avg).",
+      "description": "Displays both sum and average token usage for each token type as bar gauges. This panel shows four values in total – one for each metric (Sum and Avg) per token type.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1095,26 +1094,18 @@
       "targets": [
         {
           "expr": "librechat_transaction_cost_sum",
-          "legendFormat": "Token Sum ({{tokenType}})",
-          "refId": "A",
-          "datasource": "$prometheusDS"
+          "legendFormat": "Sum ({{tokenType}})",
+          "refId": "A"
         },
         {
           "expr": "librechat_transaction_cost_avg",
-          "legendFormat": "Token Avg ({{tokenType}})",
-          "refId": "B",
-          "datasource": "$prometheusDS"
+          "legendFormat": "Avg ({{tokenType}})",
+          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            }
-          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1132,15 +1123,19 @@
         "overrides": []
       },
       "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
           ],
-          "show": false
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "text": {
+          "titleSize": 12,
+          "valueSize": 12
         }
       }
     },
@@ -1196,7 +1191,7 @@
       }
     },
     {
-      "type": "barchart",
+      "type": "marcusolsson-treemap-panel",
       "title": "Deployed Model Usage Count",
       "description": "Usage count for each deployed agent model (metric: librechat_deployed_model_usage_count).",
       "gridPos": {
@@ -1221,11 +1216,34 @@
         },
         "overrides": []
       },
+      "transformations": [
+        {
+          "id": "seriesToRows",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "model": "Tile label",
+              "lastNotNull": "Tile size"
+            }
+          }
+        }
+      ],
       "options": {
-        "orientation": "horizontal",
-        "legend": {
-          "show": true,
-          "placement": "bottom"
+        "dimensions": {
+          "labelBy": "Tile label",
+          "sizeBy": "Tile size",
+          "colorBy": "Tile size",
+          "groupBy": "",
+          "additionalLabels": []
+        },
+        "display": {
+          "tilingAlgorithm": "squarified"
+        },
+        "fieldOptions": {
+          "separator": ""
         }
       }
     }

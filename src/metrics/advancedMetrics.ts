@@ -294,12 +294,18 @@ export async function updateAdvancedMetrics(): Promise<void> {
             const displayName = agentMap.get(agentId) || agentId;
             advancedGauges.deployedModelUsageCount.set({ model: displayName }, result.count);
         }
-        // Also count the total number of distinct deployed model names.
+        // Also count the total number of distinct deployed model names,
         const distinctModelsAgg = await Message.aggregate([
             { $match: { model: { $ne: null } } },
             { $group: { _id: '$model' } }
         ]);
-        advancedGauges.deployedModelNamesCount.set(distinctModelsAgg.length);
+        // filtering out models starting with "agent_" that are not present in our agent lookup.
+        const filteredDistinctModels = distinctModelsAgg.filter(doc => {
+            const agentId = doc._id;
+            return !(agentId.startsWith("agent_") && !agentMap.has(agentId));
+
+        });
+        advancedGauges.deployedModelNamesCount.set(filteredDistinctModels.length);
 
         console.log('Advanced metrics updated.');
     } catch (error) {
