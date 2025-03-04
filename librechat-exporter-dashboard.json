@@ -736,13 +736,121 @@
     {
       "collapsed": false,
       "type": "row",
+      "title": "🤖 Deployed Models Metrics",
+      "description": "Metrics for deployed agent models.",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 120,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Total Deployed Model Names",
+      "description": "Total number of distinct deployed agent model names (metric: librechat_deployed_model_names_count).",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 36
+      },
+      "id": 121,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_deployed_model_names_count",
+          "legendFormat": "Total Models",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "marcusolsson-treemap-panel",
+      "title": "Deployed Model Usage Count",
+      "description": "Usage count for each deployed agent model (metric: librechat_deployed_model_usage_count).",
+      "gridPos": {
+        "h": 12,
+        "w": 18,
+        "x": 6,
+        "y": 36
+      },
+      "id": 122,
+      "datasource": "$prometheusDS",
+      "targets": [
+        {
+          "expr": "librechat_deployed_model_usage_count",
+          "legendFormat": "{{model}}",
+          "refId": "A",
+          "datasource": "$prometheusDS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "transformations": [
+        {
+          "id": "seriesToRows",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "model": "Tile label",
+              "lastNotNull": "Tile size"
+            }
+          }
+        }
+      ],
+      "options": {
+        "dimensions": {
+          "labelBy": "Tile label",
+          "sizeBy": "Tile size",
+          "colorBy": "Tile size",
+          "groupBy": "",
+          "additionalLabels": []
+        },
+        "display": {
+          "tilingAlgorithm": "squarified"
+        },
+        "fieldOptions": {
+          "separator": ""
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "type": "row",
       "title": "👥 Agent & User Provider Distributions",
       "description": "Pie chart breakdown of agent models and user providers.",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 42
       },
       "id": 4,
       "panels": []
@@ -755,7 +863,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 43
       },
       "id": 109,
       "datasource": "$prometheusDS",
@@ -787,7 +895,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 43
       },
       "id": 110,
       "datasource": "$prometheusDS",
@@ -820,7 +928,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 51
       },
       "id": 5,
       "panels": []
@@ -833,7 +941,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 52
       },
       "id": 111,
       "datasource": "$prometheusDS",
@@ -871,7 +979,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 52
       },
       "id": 112,
       "datasource": "$prometheusDS",
@@ -910,7 +1018,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 60
       },
       "id": 6,
       "panels": []
@@ -923,7 +1031,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 54
+        "y": 61
       },
       "id": 113,
       "datasource": "$prometheusDS",
@@ -957,7 +1065,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 54
+        "y": 61
       },
       "id": 114,
       "datasource": "$prometheusDS",
@@ -991,7 +1099,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 54
+        "y": 61
       },
       "id": 115,
       "datasource": "$prometheusDS",
@@ -1026,7 +1134,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 69
       },
       "id": 7,
       "panels": []
@@ -1039,7 +1147,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 63
+        "y": 70
       },
       "id": 116,
       "datasource": "$prometheusDS",
@@ -1087,7 +1195,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 63
+        "y": 70
       },
       "id": 117,
       "datasource": "$prometheusDS",
@@ -1136,114 +1244,6 @@
         "text": {
           "titleSize": 12,
           "valueSize": 12
-        }
-      }
-    },
-    {
-      "collapsed": false,
-      "type": "row",
-      "title": "🤖 Deployed Models Metrics",
-      "description": "Metrics for deployed agent models.",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 71
-      },
-      "id": 120,
-      "panels": []
-    },
-    {
-      "type": "stat",
-      "title": "Total Deployed Model Names",
-      "description": "Total number of distinct deployed agent model names (metric: librechat_deployed_model_names_count).",
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 72
-      },
-      "id": 121,
-      "datasource": "$prometheusDS",
-      "targets": [
-        {
-          "expr": "librechat_deployed_model_names_count",
-          "legendFormat": "Total Models",
-          "refId": "A",
-          "datasource": "$prometheusDS"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "options": {
-        "textMode": "value",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      }
-    },
-    {
-      "type": "marcusolsson-treemap-panel",
-      "title": "Deployed Model Usage Count",
-      "description": "Usage count for each deployed agent model (metric: librechat_deployed_model_usage_count).",
-      "gridPos": {
-        "h": 6,
-        "w": 16,
-        "x": 8,
-        "y": 72
-      },
-      "id": 122,
-      "datasource": "$prometheusDS",
-      "targets": [
-        {
-          "expr": "librechat_deployed_model_usage_count",
-          "legendFormat": "{{model}}",
-          "refId": "A",
-          "datasource": "$prometheusDS"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "transformations": [
-        {
-          "id": "seriesToRows",
-          "options": {}
-        },
-        {
-          "id": "organize",
-          "options": {
-            "renameByName": {
-              "model": "Tile label",
-              "lastNotNull": "Tile size"
-            }
-          }
-        }
-      ],
-      "options": {
-        "dimensions": {
-          "labelBy": "Tile label",
-          "sizeBy": "Tile size",
-          "colorBy": "Tile size",
-          "groupBy": "",
-          "additionalLabels": []
-        },
-        "display": {
-          "tilingAlgorithm": "squarified"
-        },
-        "fieldOptions": {
-          "separator": ""
         }
       }
     }
