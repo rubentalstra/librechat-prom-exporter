@@ -124,11 +124,13 @@ GET /metrics
 Point your Prometheus server to scrape this endpoint at intervals (e.g., every 15s or 30s). For example, in `prometheus.yml`:
 
 ```yaml
+global:
+   scrape_interval: 15s
+
 scrape_configs:
-  - job_name: 'librechat_exporter'
-    scrape_interval: 15s
-    static_configs:
-      - targets: ['localhost:9087']
+   - job_name: 'librechat-exporter'
+     static_configs:
+        - targets: ['exporter:9087']
 ```
 
 ---
@@ -139,10 +141,13 @@ scrape_configs:
     - Ensure your `prometheus.yml` includes the `scrape_configs` pointing to the exporter.
     - Example:
       ```yaml
+      global:
+          scrape_interval: 15s
+      
       scrape_configs:
-        - job_name: 'librechat_exporter'
-          static_configs:
-            - targets: ['localhost:9087']
+          - job_name: 'librechat-exporter'
+            static_configs:
+                - targets: ['exporter:9087']
       ```
 
 2. **Grafana**:
