@@ -36,7 +36,7 @@
   "timezone": "",
   "title": "LibreChat Exporter Dashboard",
   "uid": "librechat-exporter-dashboard",
-  "version": 6,
+  "version": 7,
   "weekStart": "",
   "panels": [
     {
@@ -750,17 +750,17 @@
       "pluginVersion": "2.0.1",
       "targets": [
         {
-          "expr": "increase(librechat_model_usage_count[$__range])",
+          "expr": "librechat_model_usage_count",
           "legendFormat": "{{model}}",
           "refId": "A"
         },
         {
-          "expr": "increase(librechat_agent_usage_count[$__range])",
+          "expr": "librechat_agent_usage_count",
           "legendFormat": "{{agent}}",
           "refId": "B"
         },
         {
-          "expr": "increase(librechat_assistant_usage_count[$__range])",
+          "expr": "librechat_assistant_usage_count",
           "legendFormat": "{{assistant}}",
           "refId": "C"
         }
@@ -834,12 +834,12 @@
       },
       "targets": [
         {
-          "expr": "increase(librechat_agent_usage_count[$__range])",
+          "expr": "librechat_agent_usage_count",
           "legendFormat": "{{agent}}",
           "refId": "A"
         },
         {
-          "expr": "increase(librechat_assistant_usage_count[$__range])",
+          "expr": "librechat_assistant_usage_count",
           "legendFormat": "{{assistant}}",
           "refId": "B"
         }
