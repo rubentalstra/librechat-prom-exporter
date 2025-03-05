@@ -98,9 +98,6 @@ export const advancedGauges = {
     }),
 
     // Transaction cost metrics – recalculated using provided transaction data.
-    // New logic:
-    //   tokenValue is provided in the transaction schema
-    //   costUSD = abs(tokenValue) / 1,000,000
     transactionCostSum: new client.Gauge({
         name: 'librechat_transaction_cost_sum',
         help: 'Sum of transaction cost in USD by token type',
@@ -111,7 +108,6 @@ export const advancedGauges = {
         help: 'Average transaction cost in USD by token type',
         labelNames: ['tokenType']
     }),
-    // Overall cost gauges
     transactionCostTotalUSD: new client.Gauge({
         name: 'librechat_transaction_cost_total_usd',
         help: 'Total transaction cost in USD (aggregated over all token types)'
@@ -120,14 +116,13 @@ export const advancedGauges = {
         name: 'librechat_transaction_cost_per_user',
         help: 'Average transaction cost in USD per user'
     }),
-    // Transaction cost per model now uses the model name directly.
     transactionCostPerModel: new client.Gauge({
         name: 'librechat_transaction_cost_per_model',
         help: 'Total transaction cost in USD per deployed model',
         labelNames: ['model']
     }),
 
-    // New: Transaction token metrics – sum and average of tokens from transactions.
+    // Transaction token metrics – sum and average of tokens from transactions.
     transactionTokenSum: new client.Gauge({
         name: 'librechat_transaction_token_sum',
         help: 'Sum of tokens (absolute rawAmount) from all transactions'
@@ -144,11 +139,22 @@ export const advancedGauges = {
         labelNames: ['type']
     }),
 
-    // Deployed models metrics
+    // New: Separate gauges for deployed models, agents, and assistants.
+    // Only count messages for models that are not agents or assistants.
     deployedModelUsageCount: new client.Gauge({
-        name: 'librechat_deployed_model_usage_count',
-        help: 'Usage count for each deployed model as indicated by the Message model',
+        name: 'librechat_model_usage_count',
+        help: 'Usage count for each deployed model',
         labelNames: ['model']
+    }),
+    agentUsageCount: new client.Gauge({
+        name: 'librechat_agent_usage_count',
+        help: 'Usage count for each agent',
+        labelNames: ['agent']
+    }),
+    assistantUsageCount: new client.Gauge({
+        name: 'librechat_assistant_usage_count',
+        help: 'Usage count for each assistant',
+        labelNames: ['assistant']
     }),
     deployedModelNamesCount: new client.Gauge({
         name: 'librechat_deployed_model_names_count',
@@ -255,21 +261,16 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.conversationMessageAvg.set(convAgg[0]?.avgMessages || 0);
 
         // --- Transaction Metrics ---
-        // Fetch all transactions and calculate costs using the transaction schema data.
         const transactions = await Transaction.find({});
         const txnByType: Record<string, { total: number; count: number }> = {};
         let tokensSum = 0;
         const modelCostMap: Record<string, { total: number; count: number }> = {};
 
         for (const tx of transactions) {
-            // Ensure rawAmount is a valid number (default to 0 if undefined)
             const rawAmount: number = typeof tx.rawAmount === 'number' ? tx.rawAmount : 0;
             const tokenType: string = tx.tokenType || 'unknown';
             const effectiveModel: string = tx.model;
 
-            // Use provided tokenValue and rate from the transaction schema.
-            // tokenValue should equal rawAmount × rate.
-            // USD cost is calculated as: costUSD = abs(tokenValue) / 1,000,000.
             const tokenValue: number = typeof tx.tokenValue === 'number'
                 ? tx.tokenValue
                 : Math.abs(rawAmount) * (typeof tx.rate === 'number' ? tx.rate : 1);
@@ -282,7 +283,6 @@ export async function updateAdvancedMetrics(): Promise<void> {
             txnByType[tokenType].total += costUSD;
             txnByType[tokenType].count += 1;
 
-            // Group by deployed model.
             if (!modelCostMap[effectiveModel]) {
                 modelCostMap[effectiveModel] = { total: 0, count: 0 };
             }
@@ -316,7 +316,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.transactionCostPerModel.set({ model }, total);
         }
 
-        // Group actions by type
+        // Action metrics
         const actionAgg = await Action.aggregate([
             { $group: { _id: '$type', count: { $sum: 1 } } }
         ]);
@@ -326,41 +326,54 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.actionCountByType.set({ type }, result.count);
         }
 
-        // Deployed models metrics using the Message model
-        // Group messages by their "model" field (which stores the agent id)
+        // --- Updated Deployed Models / Agents / Assistants Metrics ---
+        // Group messages by their "model" field.
         const deployedModelsAgg = await Message.aggregate([
             { $match: { model: { $ne: null } } },
             { $group: { _id: '$model', count: { $sum: 1 } } }
         ]);
-        // Get the list of agent IDs from the aggregation result
+
+        // Get agent (or assistant) names from Agent collection based on their id.
         const agentIds: string[] = deployedModelsAgg.map(result => result._id);
-        // Query Agent collection to get their names based on the agent id field
         const agents = await Agent.find({ id: { $in: agentIds } });
         const agentMap: Map<string, string> = new Map();
         agents.forEach(agent => {
-            // Use agent.name if available; otherwise fallback to agent.id
+            // Use agent.name if available; otherwise fallback to agent.id.
             agentMap.set(agent.id, agent.name ? agent.name : agent.id);
         });
+
+        // Reset all three gauges.
         advancedGauges.deployedModelUsageCount.reset();
+        advancedGauges.agentUsageCount.reset();
+        advancedGauges.assistantUsageCount.reset();
+
         for (const result of deployedModelsAgg) {
-            const agentId: string = result._id;
-            // If the agentId starts with "agent_" and is not found in the agent table, skip it.
-            if (agentId.startsWith("agent_") && !agentMap.has(agentId)) {
-                continue;
+            const id: string = result._id;
+            // If it's an agent, only update if we can map it to an agent.
+            if (id.startsWith("agent_")) {
+                if (agentMap.has(id)) {
+                    const displayName = agentMap.get(id)!;
+                    advancedGauges.agentUsageCount.set({ agent: displayName }, result.count);
+                }
+            } else if (id.startsWith("assistant_")) {
+                if (agentMap.has(id)) {
+                    const displayName = agentMap.get(id)!;
+                    advancedGauges.assistantUsageCount.set({ assistant: displayName }, result.count);
+                }
+            } else {
+                // Otherwise, count it as a deployed model.
+                advancedGauges.deployedModelUsageCount.set({ model: id }, result.count);
             }
-            // Use the name from the agent map if available; otherwise fallback to the agentId.
-            const displayName: string = agentMap.get(agentId) || agentId;
-            advancedGauges.deployedModelUsageCount.set({ model: displayName }, result.count);
         }
-        // Also count the total number of distinct deployed model names,
+
+        // Also count the total number of distinct deployed model names (only models, excluding agents/assistants).
         const distinctModelsAgg = await Message.aggregate([
             { $match: { model: { $ne: null } } },
             { $group: { _id: '$model' } }
         ]);
-        // Filtering out models starting with "agent_" that are not present in our agent lookup.
         const filteredDistinctModels = distinctModelsAgg.filter(doc => {
-            const agentId: string = doc._id;
-            return !(agentId.startsWith("agent_") && !agentMap.has(agentId));
+            const id: string = doc._id;
+            return !id.startsWith("agent_") && !id.startsWith("assistant_");
         });
         advancedGauges.deployedModelNamesCount.set(filteredDistinctModels.length);
 

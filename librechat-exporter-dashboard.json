@@ -37,7 +37,7 @@
   "timezone": "",
   "title": "LibreChat Exporter Dashboard",
   "uid": "librechat-exporter-dashboard",
-  "version": 5,
+  "version": 6,
   "weekStart": "",
   "panels": [
     {
@@ -334,7 +334,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Totals for messages, tool calls, plugin auth, and actions over the selected time range.",
+      "description": "Totals for messages, tool calls, plugin auth, and actions (all are now gauges).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -382,27 +382,27 @@
       },
       "targets": [
         {
-          "expr": "increase(librechat_message_count[$__range])",
+          "expr": "librechat_message_count",
           "legendFormat": "Message Count",
           "refId": "A"
         },
         {
-          "expr": "increase(librechat_tool_call_count[$__range])",
+          "expr": "librechat_tool_call_count",
           "legendFormat": "Tool Call Count",
           "refId": "B"
         },
         {
-          "expr": "increase(librechat_plugin_auth_count[$__range])",
+          "expr": "librechat_plugin_auth_count",
           "legendFormat": "Plugin Auth Count",
           "refId": "C"
         },
         {
-          "expr": "increase(librechat_action_count[$__range])",
+          "expr": "librechat_action_count",
           "legendFormat": "Action Count",
           "refId": "D"
         }
       ],
-      "title": "Messages & Tools Increase",
+      "title": "Messages & Tools (Total)",
       "type": "stat"
     },
     {
@@ -474,7 +474,7 @@
       "type": "stat"
     },
     {
-      "description": "Counts for transactions, tokens, and balances over the selected time range.",
+      "description": "Counts for transactions, tokens, and cost-related metrics (all are gauges).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -523,12 +523,12 @@
       },
       "targets": [
         {
-          "expr": "increase(librechat_transaction_count[$__range])",
+          "expr": "librechat_transaction_count",
           "legendFormat": "Transaction Count",
           "refId": "A"
         },
         {
-          "expr": "increase(librechat_token_count[$__range])",
+          "expr": "librechat_token_count",
           "legendFormat": "Token Count",
           "refId": "B"
         },
@@ -536,9 +536,19 @@
           "expr": "librechat_balance_count",
           "legendFormat": "Balance Count",
           "refId": "C"
+        },
+        {
+          "expr": "librechat_transaction_cost_total_usd",
+          "legendFormat": "Transaction Cost (USD)",
+          "refId": "D"
+        },
+        {
+          "expr": "librechat_transaction_cost_per_user",
+          "legendFormat": "Cost per User (USD)",
+          "refId": "E"
         }
       ],
-      "title": "Transactions & Tokens Increase",
+      "title": "Transactions & Costs (Total)",
       "type": "stat"
     },
     {
@@ -624,7 +634,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Advanced message metrics over the selected time range: token sum (delta), token avg, error messages, and attachments.",
+      "description": "Message stats: total tokens, average tokens, error messages, attachments, and plugin usage. All are now gauge values or direct percentages.",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -685,7 +695,7 @@
       },
       "targets": [
         {
-          "expr": "delta(librechat_message_token_sum[$__range])",
+          "expr": "librechat_message_token_sum",
           "legendFormat": "Token Sum",
           "refId": "A"
         },
@@ -695,12 +705,12 @@
           "refId": "B"
         },
         {
-          "expr": "increase(librechat_error_message_count[$__range])",
+          "expr": "librechat_error_message_count",
           "legendFormat": "Error Msg Count",
           "refId": "C"
         },
         {
-          "expr": "increase(librechat_message_with_attachments_count[$__range])",
+          "expr": "librechat_message_with_attachments_count",
           "legendFormat": "Msg w/ Attachments",
           "refId": "D"
         },
@@ -710,7 +720,7 @@
           "refId": "E"
         }
       ],
-      "title": "Advanced Message Metrics",
+      "title": "Message Metrics",
       "type": "stat"
     },
     {
@@ -749,7 +759,6 @@
         "justifyMode": "auto",
         "layout": "horizontal",
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -791,7 +800,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Total number of distinct deployed agent model names (metric: librechat_deployed_model_names_count).",
+      "description": "Total number of distinct deployed model names (metric: librechat_deployed_model_names_count).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -848,7 +857,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Usage count for each deployed agent model (metric: librechat_deployed_model_usage_count).",
+      "description": "Usage count for each deployed model, agent, and assistant (metrics: librechat_model_usage_count, librechat_agent_usage_count, librechat_assistant_usage_count).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -895,12 +904,22 @@
       "pluginVersion": "2.0.1",
       "targets": [
         {
-          "expr": "librechat_deployed_model_usage_count",
+          "expr": "librechat_model_usage_count",
           "legendFormat": "{{model}}",
           "refId": "A"
+        },
+        {
+          "expr": "librechat_agent_usage_count",
+          "legendFormat": "{{agent}}",
+          "refId": "B"
+        },
+        {
+          "expr": "librechat_assistant_usage_count",
+          "legendFormat": "{{assistant}}",
+          "refId": "C"
         }
       ],
-      "title": "Deployed Model Usage Count",
+      "title": "Deployed Model, Agent & Assistants Usage Count",
       "transformations": [
         {
           "id": "seriesToRows",
@@ -911,7 +930,9 @@
           "options": {
             "renameByName": {
               "lastNotNull": "Tile size",
-              "model": "Tile label"
+              "model": "Tile label",
+              "agent": "Tile label",
+              "assistant": "Tile label"
             }
           }
         }
@@ -920,7 +941,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Distribution of agent models (metric: librechat_agent_model_count).",
+      "description": "Distribution (usage count) for each agent (metric: librechat_agent_usage_count).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -967,12 +988,17 @@
       },
       "targets": [
         {
-          "expr": "librechat_agent_model_count",
-          "legendFormat": "{{model}}",
+          "expr": "librechat_agent_usage_count",
+          "legendFormat": "{{agent}}",
           "refId": "A"
+        },
+        {
+          "expr": "librechat_assistant_usage_count",
+          "legendFormat": "{{assistant}}",
+          "refId": "B"
         }
       ],
-      "title": "Agent Model Count",
+      "title": "Agent and Assistants Usage Count",
       "type": "piechart"
     },
     {
@@ -1256,7 +1282,7 @@
           "refId": "A"
         }
       ],
-      "title": "Action Count by Type (Increase)",
+      "title": "Action Count by Type",
       "type": "barchart"
     },
     {
@@ -1343,12 +1369,12 @@
           "refId": "A"
         }
       ],
-      "title": "Prompt Count by Type (Increase)",
+      "title": "Prompt Count by Type",
       "type": "barchart"
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Counts of tool calls by toolId over the selected time range (metric: librechat_tool_call_count_by_tool).",
+      "description": "Counts of tool calls by toolId.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1425,12 +1451,12 @@
       },
       "targets": [
         {
-          "expr": "increase(librechat_tool_call_count_by_tool[$__range])",
+          "expr": "librechat_tool_call_count_by_tool",
           "legendFormat": "Tool Calls ({{toolId}})",
           "refId": "A"
         }
       ],
-      "title": "Tool Call Count by Tool (Increase)",
+      "title": "Tool Call Count by Tool",
       "type": "barchart"
     },
     {
@@ -1448,7 +1474,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Displays average messages per conversation as a bar chart (metric: librechat_conversation_message_avg).",
+      "description": "Average messages per conversation.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1504,7 +1530,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Displays both sum and average transaction cost usage (delta) over the selected time range.",
+      "description": "Sum and average cost usage by token type (we show them as two separate gauge queries).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1562,22 +1588,22 @@
       },
       "targets": [
         {
-          "expr": "delta(librechat_transaction_cost_sum[$__range])",
+          "expr": "librechat_transaction_cost_sum",
           "legendFormat": "Sum ({{tokenType}})",
           "refId": "A"
         },
         {
-          "expr": "delta(librechat_transaction_cost_avg[$__range])",
+          "expr": "librechat_transaction_cost_avg",
           "legendFormat": "Avg ({{tokenType}})",
           "refId": "B"
         }
       ],
-      "title": "Transaction Token Usage (Delta)",
+      "title": "Transaction Token Usage (By Token Type)",
       "type": "bargauge"
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Total tokens from transactions (absolute sum).",
+      "description": "Total tokens from all transactions.",
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -1634,7 +1660,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Average tokens per transaction (absolute average).",
+      "description": "Average tokens per transaction.",
       "fieldConfig": {
         "defaults": {
           "unit": "none",
@@ -1691,7 +1717,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Average transaction cost in USD per deployed model (grouped by model).",
+      "description": "Transaction cost in USD per deployed model.",
       "fieldConfig": {
         "defaults": {
           "unit": "usd",
@@ -1749,7 +1775,7 @@
           "refId": "A"
         }
       ],
-      "title": "Transaction Cost per Model (Avg)",
+      "title": "Transaction Cost per Model",
       "type": "barchart"
     }
   ]
