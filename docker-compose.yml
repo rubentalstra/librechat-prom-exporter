@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   exporter:
     image: ghcr.io/rubentalstra/librechat-prom-exporter:latest

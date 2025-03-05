@@ -9,7 +9,7 @@ permissions:
   packages: write
 
 jobs:
-  docker_build:
+  build_linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -25,20 +25,49 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image (latest)
-        if: github.ref == 'refs/heads/main'
+      - name: Build and push Linux image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest
+          platforms: linux/amd64,linux/arm64
+          # Append "-linux" to the tag so we can differentiate when merging the manifest
+          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}-linux
 
-      - name: Build and push Docker image (version tag)
-        if: startsWith(github.ref, 'refs/tags/')
+  build_windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Windows image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          platforms: windows/amd64
+          # Append "-windows" to the tag so we can differentiate when merging the manifest
+          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}-windows
+
+  manifest:
+    runs-on: ubuntu-latest
+    needs: [build_linux, build_windows]
+    steps:
+      - name: Create and push multi-arch manifest
+        run: |
+          docker manifest create ghcr.io/${{ github.repository }}:${{ github.ref_name }} \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-linux \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-windows
+          docker manifest push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
