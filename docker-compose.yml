@@ -2,10 +2,7 @@ version: "3.9"
 
 services:
   exporter:
-    build:
-      context: .
-      args:
-        PORT: ${PORT}
+    image: ghcr.io/rubentalstra/librechat-prom-exporter:latest
     ports:
       - "${PORT}:${PORT}"
     env_file:
