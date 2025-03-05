@@ -23,9 +23,8 @@ export default [
         ignores: ['node_modules/**/*', 'dist/**/*'],
     },
     // Extend from eslint:recommended.
-    ...fixupConfigRules(
-        compat.extends('eslint:recommended')
-    ),
+    ...fixupConfigRules(compat.extends('eslint:recommended')),
+    // Global configuration for JavaScript and other non-TypeScript files.
     {
         plugins: {
             '@typescript-eslint': fixupPluginRules(typescriptEslintPlugin),
@@ -58,14 +57,6 @@ export default [
             },
         },
         rules: {
-            '@typescript-eslint/ban-ts-comment': [
-                'error',
-                { 'ts-ignore': false }
-            ],
-            'no-nested-ternary': 'warn',
-            'no-constant-binary-expression': 'warn',
-            'no-unused-vars': 'warn',
-            indent: ['error', 2, { SwitchCase: 1 }],
             'max-len': [
                 'error',
                 {
@@ -75,32 +66,19 @@ export default [
                     ignoreComments: true,
                 },
             ],
-            'linebreak-style': 0,
             curly: ['error', 'all'],
             semi: ['error', 'always'],
             'object-curly-spacing': ['error', 'always'],
             'no-multiple-empty-lines': ['error', { max: 1 }],
             'no-trailing-spaces': 'error',
             'comma-dangle': ['error', 'always-multiline'],
+            // Import and other project-specific rules.
             'no-console': 'off',
-            'import/no-cycle': 'error',
-            'import/no-self-import': 'error',
-            'import/extensions': 'off',
-            'no-promise-executor-return': 'off',
-            'no-param-reassign': 'off',
-            'no-continue': 'off',
-            'no-restricted-syntax': 'off',
-            quotes: ['error', 'single'],
-            'key-spacing': ['error', { beforeColon: false, afterColon: true }],
         },
     },
+    // TypeScript-specific configuration.
     {
         files: ['**/*.ts'],
-        ignores: ['dist/**/*'],
-        plugins: {
-            '@typescript-eslint': fixupPluginRules(typescriptEslintPlugin),
-            jest: fixupPluginRules(jest),
-        },
         languageOptions: {
             parser: tsParser,
             ecmaVersion: 'latest',
@@ -110,14 +88,15 @@ export default [
             },
         },
         rules: {
+            // Use the TypeScript-specific unused vars rule.
+            'no-unused-vars': 'off',
+            '@typescript-eslint/no-unused-vars': 'warn',
+            // Disable rules that conflict or are not as useful in TS files.
             '@typescript-eslint/no-unused-expressions': 'off',
-            '@typescript-eslint/no-unused-vars': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
             '@typescript-eslint/no-unnecessary-condition': 'off',
             '@typescript-eslint/strict-boolean-expressions': 'off',
             '@typescript-eslint/ban-ts-comment': 'off',
-            'no-constant-binary-expression': 'off',
-            'no-nested-ternary': 'off',
         },
     },
     ...compat
@@ -125,8 +104,8 @@ export default [
             'plugin:@typescript-eslint/eslint-recommended',
             'plugin:@typescript-eslint/recommended'
         )
-        .map((config) => ({
-            ...config,
-            files: ['**/*.ts'],
-        })),
+        .map((config) => {
+            const { plugins, ...rest } = config;
+            return { ...rest, files: ['**/*.ts'] };
+        }),
 ];
