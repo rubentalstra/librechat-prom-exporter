@@ -2,13 +2,13 @@
 
 Welcome to the **LibreChat Prometheus Exporter** repository! This project provides a lightweight Node.js service (built with **Express**, **Mongoose**, and **prom-client**) that connects to your LibreChat MongoDB database, collects useful metrics, and exposes them on a `/metrics` endpoint. You can then configure **Prometheus** to scrape these metrics and visualize them using tools like **Grafana**.
 
----
-
 ## Table of Contents
 
 1. [Features](#features)
 2. [Prerequisites](#prerequisites)
 3. [Installation & Setup](#installation--setup)
+   - [Local Setup](#local-setup)
+   - [Docker Setup](#docker-setup)
 4. [Environment Variables](#environment-variables)
 5. [Usage](#usage)
 6. [Prometheus & Grafana Configuration](#prometheus--grafana-configuration)
@@ -18,7 +18,6 @@ Welcome to the **LibreChat Prometheus Exporter** repository! This project provid
 10. [Contributing](#contributing)
 11. [License](#license)
 
----
 
 ## Features
 
@@ -27,7 +26,6 @@ Welcome to the **LibreChat Prometheus Exporter** repository! This project provid
 - **Prometheus Integration**: Exposes a `/metrics` endpoint that Prometheus can scrape.
 - **Grafana Dashboard**: Provides an example dashboard configuration (JSON) for visualizing metrics (see [Dashboard Example](#dashboard-example)).
 
----
 
 ## Prerequisites
 
@@ -37,13 +35,12 @@ Welcome to the **LibreChat Prometheus Exporter** repository! This project provid
 4. **Prometheus** (for metric scraping)
 5. **Grafana** (for visualization, optional but highly recommended)
 
----
 
 ## Installation & Setup
 
-You can run the exporter locally (using Node.js) or inside a Docker container. Below are instructions for both.
+You can run the exporter either locally using Node.js or inside a Docker container. Below are the instructions for both methods.
 
-### 1. Local Setup
+### Local Setup
 
 1. **Clone the repository**:
    ```bash
@@ -57,12 +54,11 @@ You can run the exporter locally (using Node.js) or inside a Docker container. B
    ```
 
 3. **Set environment variables**:  
-   An example file `.env.example` is provided in the project root.  
-   To configure your environment, copy this file to a new `.env` file and update it with your specific settings:
+   An example file `.env.example` is provided in the project root. Copy this file to a new `.env` file and update it with your specific settings:
    ```bash
    cp .env.example .env
    ```
-   Alternatively, you can set the environment variables in your shell. See the [Environment Variables](#environment-variables) section for details.
+   Alternatively, set the environment variables in your shell (see the [Environment Variables](#environment-variables) section).
 
 4. **Build the project**:
    ```bash
@@ -75,12 +71,12 @@ You can run the exporter locally (using Node.js) or inside a Docker container. B
    ```
    The exporter should now be running on the configured port (default `9087`).
 
-### 2. Docker Setup
+### Docker Setup
 
-A Dockerfile and a `docker-compose.yml` are included for convenience:
+This setup uses the prebuilt **LibreChat Prometheus Exporter** image from GitHub Container Registry, so there’s no need to build the container locally.
 
 1. **Set environment variables**:  
-   As with the local setup, you can copy `.env.example` to `.env` in the same directory as `docker-compose.yml`:
+   Copy `.env.example` to `.env` in the same directory as the `docker-compose.yml`:
    ```bash
    cp .env.example .env
    ```
@@ -89,16 +85,15 @@ A Dockerfile and a `docker-compose.yml` are included for convenience:
    ```bash
    docker-compose up -d
    ```
-    - This will build and run the **exporter** service.
-    - It will also spin up a Prometheus container if desired (based on the provided `docker-compose.yml`).
+   - This will pull the latest `ghcr.io/rubentalstra/librechat-prom-exporter:latest` image for the exporter service.
+   - It will also spin up a Prometheus container based on the configuration in `docker-compose.yml`.
 
 3. The exporter container should now be exposing metrics on `http://localhost:9087/metrics` (or your chosen port).
 
----
 
 ## Environment Variables
 
-The following environment variables can be configured via the `.env` file (or your shell environment). You can use the provided `.env.example` as a starting point.
+The following environment variables can be configured via the `.env` file (or your shell environment). Use the provided `.env.example` as a starting point.
 
 | Variable    | Default                                          | Description                                                    |
 |-------------|--------------------------------------------------|----------------------------------------------------------------|
@@ -111,7 +106,6 @@ MONGO_URI=mongodb://my-mongo-host:27017/librechat
 PORT=9087
 ```
 
----
 
 ## Usage
 
@@ -121,7 +115,7 @@ Once running, the service will connect to your LibreChat MongoDB database, gathe
 GET /metrics
 ```
 
-Point your Prometheus server to scrape this endpoint at intervals (e.g., every 15s or 30s). For example, in `prometheus.yml`:
+Point your Prometheus server to scrape this endpoint at regular intervals (e.g., every 15s or 30s). For example, in your `prometheus.yml`:
 
 ```yaml
 global:
@@ -133,29 +127,27 @@ scrape_configs:
         - targets: ['exporter:9087']
 ```
 
----
 
 ## Prometheus & Grafana Configuration
 
 1. **Prometheus**:
-    - Ensure your `prometheus.yml` includes the `scrape_configs` pointing to the exporter.
-    - Example:
-      ```yaml
-      global:
-          scrape_interval: 15s
-      
-      scrape_configs:
-          - job_name: 'librechat-exporter'
-            static_configs:
-                - targets: ['exporter:9087']
-      ```
+   - Ensure your `prometheus.yml` includes the `scrape_configs` pointing to the exporter.
+   - Example:
+     ```yaml
+     global:
+         scrape_interval: 15s
+     
+     scrape_configs:
+         - job_name: 'librechat-exporter'
+           static_configs:
+               - targets: ['exporter:9087']
+     ```
 
 2. **Grafana**:
-    - Create a new dashboard or import the provided JSON file (`librechat-exporter-dashboard.json`) found in the repository.
-    - Set the data source to your Prometheus instance.
-    - You will then see panels for user counts, message stats, transaction costs, and more.
+   - Create a new dashboard or import the provided JSON file (`librechat-exporter-dashboard.json`) found in the repository.
+   - Set the data source to your Prometheus instance.
+   - You will then see panels for user counts, message stats, transaction costs, and more.
 
----
 
 ## Dashboard Example
 
@@ -168,9 +160,8 @@ The repository contains a sample **Grafana Dashboard** JSON (`librechat-exporter
 - **Actions & Tools by Type** (bar charts for action and prompt counts, tool call usage)
 - **Conversation & Transaction Insights** (average messages per conversation, transaction cost breakdown, token sums)
 
-You can import this file directly into Grafana to get a comprehensive overview of your LibreChat metrics.
+Import this file directly into Grafana to get a comprehensive overview of your LibreChat metrics.
 
----
 
 ## Dashboard Screenshots
 
@@ -197,18 +188,14 @@ librechat-prom-exporter/
 │   ├── models/                 # Mongoose models (User, Message, Conversation, etc.)
 │   ├── index.ts                # Express app setup and the /metrics endpoint
 ├── dist/                       # Compiled JavaScript output (generated by `npm run build`)
-├── Dockerfile                  # Docker build instructions for creating the exporter container
+├── Dockerfile                  # (Optional) Docker build instructions for the exporter service
 ├── docker-compose.yml          # Docker Compose file for running the exporter (and optionally Prometheus) as containers
 ├── prometheus.yml              # Sample Prometheus configuration file
 ├── package.json                
 ├── tsconfig.json               
-├── .env.example              # Example environment variables file
+├── .env.example                # Example environment variables file
 └── README.md                   
 ```
-
-Key files:
-- **`basicMetrics.ts`** & **`advancedMetrics.ts`**: Where the various Prometheus gauges are defined and updated.
-- **`index.ts`**: The Express server that serves `/metrics`.
 
 ---
 
