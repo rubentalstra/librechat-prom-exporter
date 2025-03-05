@@ -1,0 +1,37 @@
+name: Security Audit
+on:
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+jobs:
+  dependency-security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit vulnerabilities with npm
+        run: npm audit --production --audit-level=high
+
+      - name: (Optional) Scan for vulnerabilities with Snyk
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+        if: ${{ secrets.SNYK_TOKEN != '' }}
+
+      - name: List outdated dependencies (informational)
+        run: npm outdated || true
