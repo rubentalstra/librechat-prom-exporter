@@ -37,7 +37,7 @@
   "timezone": "",
   "title": "LibreChat Exporter Dashboard",
   "uid": "librechat-exporter-dashboard",
-  "version": 4,
+  "version": 5,
   "weekStart": "",
   "panels": [
     {
@@ -55,10 +55,9 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics including users, conversations, tokens, transactions, and more.\n\n**Highlights**:\n- **User Activity**: Active users over time.\n- **Key Metrics Overview**: Quick totals for users, agents, conversations, messages, etc.\n- **Message & File Metrics**: Token sums, average tokens, error counts.\n- **Agent & Provider / Model Distribution**: Breakdown of agent models, user providers, and deployed models.\n- **Session & Prompt Performance**: Average durations and prompt usage.\n- **Actions & Tools**: Bar charts for usage by type.\n- **Conversation & Transaction Insights**: Trends in messaging and token/transaction usage.\n\nHover on panels for details or drill deeper.\n",
+        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics including users, conversations, tokens, transactions, and more. The queries are calculated over the currently selected time range (e.g. last 24 hours).\n\nHover on panels for details or drill deeper.\n",
         "mode": "markdown"
       },
-
       "title": "Dashboard Overview",
       "type": "text"
     },
@@ -230,7 +229,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-
       "targets": [
         {
           "expr": "librechat_user_count",
@@ -304,7 +302,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-
       "targets": [
         {
           "expr": "librechat_conversation_count",
@@ -337,7 +334,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Totals for messages, tool calls, plugin auth, and actions.",
+      "description": "Totals for messages, tool calls, plugin auth, and actions over the selected time range.",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -383,30 +380,29 @@
         "textMode": "auto",
         "wideLayout": true
       },
-
       "targets": [
         {
-          "expr": "librechat_message_count",
+          "expr": "increase(librechat_message_count[$__range])",
           "legendFormat": "Message Count",
           "refId": "A"
         },
         {
-          "expr": "librechat_tool_call_count",
+          "expr": "increase(librechat_tool_call_count[$__range])",
           "legendFormat": "Tool Call Count",
           "refId": "B"
         },
         {
-          "expr": "librechat_plugin_auth_count",
+          "expr": "increase(librechat_plugin_auth_count[$__range])",
           "legendFormat": "Plugin Auth Count",
           "refId": "C"
         },
         {
-          "expr": "librechat_action_count",
+          "expr": "increase(librechat_action_count[$__range])",
           "legendFormat": "Action Count",
           "refId": "D"
         }
       ],
-      "title": "Messages & Tools",
+      "title": "Messages & Tools Increase",
       "type": "stat"
     },
     {
@@ -457,7 +453,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-
       "targets": [
         {
           "expr": "librechat_file_count",
@@ -479,7 +474,7 @@
       "type": "stat"
     },
     {
-      "description": "Counts for transactions, tokens, and balances.",
+      "description": "Counts for transactions, tokens, and balances over the selected time range.",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -528,12 +523,12 @@
       },
       "targets": [
         {
-          "expr": "librechat_transaction_count",
+          "expr": "increase(librechat_transaction_count[$__range])",
           "legendFormat": "Transaction Count",
           "refId": "A"
         },
         {
-          "expr": "librechat_token_count",
+          "expr": "increase(librechat_token_count[$__range])",
           "legendFormat": "Token Count",
           "refId": "B"
         },
@@ -543,7 +538,7 @@
           "refId": "C"
         }
       ],
-      "title": "Transactions & Tokens",
+      "title": "Transactions & Tokens Increase",
       "type": "stat"
     },
     {
@@ -594,7 +589,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-
       "targets": [
         {
           "expr": "librechat_prompt_count",
@@ -630,7 +624,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Token usage (sum/avg), error messages, plugin usage %, and attachments.",
+      "description": "Advanced message metrics over the selected time range: token sum (delta), token avg, error messages, and attachments.",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -689,10 +683,9 @@
         "textMode": "auto",
         "wideLayout": true
       },
-
       "targets": [
         {
-          "expr": "librechat_message_token_sum",
+          "expr": "delta(librechat_message_token_sum[$__range])",
           "legendFormat": "Token Sum",
           "refId": "A"
         },
@@ -702,12 +695,12 @@
           "refId": "B"
         },
         {
-          "expr": "librechat_error_message_count",
+          "expr": "increase(librechat_error_message_count[$__range])",
           "legendFormat": "Error Msg Count",
           "refId": "C"
         },
         {
-          "expr": "librechat_message_with_attachments_count",
+          "expr": "increase(librechat_message_with_attachments_count[$__range])",
           "legendFormat": "Msg w/ Attachments",
           "refId": "D"
         },
@@ -768,7 +761,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-
       "targets": [
         {
           "expr": "librechat_file_total_bytes",
@@ -844,7 +836,6 @@
         "textMode": "value",
         "wideLayout": true
       },
-
       "targets": [
         {
           "expr": "librechat_deployed_model_names_count",
@@ -974,7 +965,6 @@
           "sort": "none"
         }
       },
-
       "targets": [
         {
           "expr": "librechat_agent_model_count",
@@ -1045,7 +1035,6 @@
           "sort": "none"
         }
       },
-
       "targets": [
         {
           "expr": "librechat_user_provider_count",
@@ -1103,7 +1092,6 @@
         "textMode": "value",
         "wideLayout": true
       },
-
       "targets": [
         {
           "expr": "librechat_session_avg_duration",
@@ -1161,7 +1149,6 @@
         "textMode": "value",
         "wideLayout": true
       },
-
       "targets": [
         {
           "expr": "librechat_prompt_group_generations_avg",
@@ -1187,7 +1174,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Breakdown of actions grouped by type (metric: librechat_action_count_by_type).",
+      "description": "Breakdown of actions grouped by type over the selected time range (metric: librechat_action_count_by_type).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1262,20 +1249,19 @@
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
-
       "targets": [
         {
-          "expr": "librechat_action_count_by_type",
+          "expr": "increase(librechat_action_count_by_type[$__range])",
           "legendFormat": "Actions ({{type}})",
           "refId": "A"
         }
       ],
-      "title": "Action Count by Type",
+      "title": "Action Count by Type (Increase)",
       "type": "barchart"
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Breakdown of prompts grouped by type (metric: librechat_prompt_count_by_type).",
+      "description": "Breakdown of prompts grouped by type over the selected time range (metric: librechat_prompt_count_by_type).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1350,20 +1336,19 @@
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
-
       "targets": [
         {
-          "expr": "librechat_prompt_count_by_type",
+          "expr": "increase(librechat_prompt_count_by_type[$__range])",
           "legendFormat": "Prompts ({{type}})",
           "refId": "A"
         }
       ],
-      "title": "Prompt Count by Type",
+      "title": "Prompt Count by Type (Increase)",
       "type": "barchart"
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Counts of tool calls by toolId (metric: librechat_tool_call_count_by_tool).",
+      "description": "Counts of tool calls by toolId over the selected time range (metric: librechat_tool_call_count_by_tool).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1438,15 +1423,14 @@
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
-
       "targets": [
         {
-          "expr": "librechat_tool_call_count_by_tool",
+          "expr": "increase(librechat_tool_call_count_by_tool[$__range])",
           "legendFormat": "Tool Calls ({{toolId}})",
           "refId": "A"
         }
       ],
-      "title": "Tool Call Count by Tool",
+      "title": "Tool Call Count by Tool (Increase)",
       "type": "barchart"
     },
     {
@@ -1471,36 +1455,10 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "bars",
-            "fillOpacity": 0,
-            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 0,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
             }
           },
           "mappings": [],
@@ -1541,7 +1499,6 @@
           "sort": "none"
         }
       },
-
       "targets": [
         {
           "expr": "librechat_conversation_message_avg",
@@ -1554,7 +1511,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Displays both sum and average token usage for each token type as bar gauges (prompt vs. completion).",
+      "description": "Displays both sum and average transaction token usage over the selected time range as bar gauges (prompt vs. completion).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1610,20 +1567,19 @@
         },
         "valueMode": "color"
       },
-
       "targets": [
         {
-          "expr": "librechat_transaction_cost_sum",
+          "expr": "delta(librechat_transaction_cost_sum[$__range])",
           "legendFormat": "Sum ({{tokenType}})",
           "refId": "A"
         },
         {
-          "expr": "librechat_transaction_cost_avg",
+          "expr": "delta(librechat_transaction_cost_avg[$__range])",
           "legendFormat": "Avg ({{tokenType}})",
           "refId": "B"
         }
       ],
-      "title": "Transaction Token Usage",
+      "title": "Transaction Token Usage (Delta)",
       "type": "bargauge"
     }
   ]
