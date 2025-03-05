@@ -23,7 +23,7 @@
   "homepage": "https://github.com/rubentalstra/librechat-prom-exporter#readme",
   "dependencies": {
     "express": "^4.21.2",
-    "mongoose": "^8.12.0",
+    "mongoose": "^8.12.1",
     "prom-client": "^15.1.3"
   },
   "devDependencies": {
