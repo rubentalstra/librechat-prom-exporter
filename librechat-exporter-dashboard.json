@@ -33,7 +33,6 @@
     "from": "now-24h",
     "to": "now"
   },
-  "timepicker": {},
   "timezone": "",
   "title": "LibreChat Exporter Dashboard",
   "uid": "librechat-exporter-dashboard",
@@ -55,7 +54,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics including users, conversations, tokens, transactions, and more. The queries are calculated over the currently selected time range (e.g. last 24 hours).\n\nHover on panels for details or drill deeper.\n",
+        "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics including users, conversations, tokens, transactions, and more. The queries are calculated over the currently selected time range (e.g. last 24 hours).",
         "mode": "markdown"
       },
       "title": "Dashboard Overview",
@@ -116,19 +115,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -187,19 +173,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -260,19 +233,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -309,22 +269,22 @@
           "refId": "A"
         },
         {
-          "expr": "librechat_conversation_tag_count",
+          "expr": "increase(librechat_conversation_tag_count[$__range])",
           "legendFormat": "Conversation Tag Count",
           "refId": "B"
         },
         {
-          "expr": "librechat_session_count",
+          "expr": "increase(librechat_session_count[$__range])",
           "legendFormat": "Session Count",
           "refId": "C"
         },
         {
-          "expr": "librechat_project_count",
+          "expr": "increase(librechat_project_count[$__range])",
           "legendFormat": "Project Count",
           "refId": "D"
         },
         {
-          "expr": "librechat_shared_link_count",
+          "expr": "increase(librechat_shared_link_count[$__range])",
           "legendFormat": "Shared Link Count",
           "refId": "E"
         }
@@ -338,19 +298,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -411,19 +358,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -468,30 +402,22 @@
           "expr": "librechat_active_banner_count",
           "legendFormat": "Active Banners",
           "refId": "C"
+        },
+        {
+          "expr": "librechat_transaction_count",
+          "legendFormat": "Transaction Count",
+          "refId": "D"
         }
       ],
-      "title": "Files & Banners",
+      "title": "Files & Banners & Transactions",
       "type": "stat"
     },
     {
-      "description": "Counts for transactions, tokens, and cost-related metrics (all are gauges).",
+      "description": "Totals for transactions and cost-related metrics (note: token count is now separated into its own section).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "none"
+          "unit": "currencyUSD"
         },
         "overrides": []
       },
@@ -523,52 +449,24 @@
       },
       "targets": [
         {
-          "expr": "librechat_transaction_count",
-          "legendFormat": "Transaction Count",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_token_count",
-          "legendFormat": "Token Count",
-          "refId": "B"
-        },
-        {
-          "expr": "librechat_balance_count",
-          "legendFormat": "Balance Count",
-          "refId": "C"
-        },
-        {
           "expr": "librechat_transaction_cost_total_usd",
           "legendFormat": "Transaction Cost (USD)",
-          "refId": "D"
+          "refId": "A"
         },
         {
           "expr": "librechat_transaction_cost_per_user",
           "legendFormat": "Cost per User (USD)",
-          "refId": "E"
+          "refId": "B"
         }
       ],
-      "title": "Transactions & Costs (Total)",
+      "title": "Cost Metrics (Total)",
       "type": "stat"
     },
     {
-      "description": "Counts for prompts, prompt groups, and presets.",
+      "description": "Totals for prompts, prompt groups, and presets.",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -638,19 +536,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": [
@@ -729,19 +614,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "bytes"
         },
         "overrides": []
@@ -804,19 +676,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -861,19 +720,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -904,17 +750,17 @@
       "pluginVersion": "2.0.1",
       "targets": [
         {
-          "expr": "librechat_model_usage_count",
+          "expr": "increase(librechat_model_usage_count[$__range])",
           "legendFormat": "{{model}}",
           "refId": "A"
         },
         {
-          "expr": "librechat_agent_usage_count",
+          "expr": "increase(librechat_agent_usage_count[$__range])",
           "legendFormat": "{{agent}}",
           "refId": "B"
         },
         {
-          "expr": "librechat_assistant_usage_count",
+          "expr": "increase(librechat_assistant_usage_count[$__range])",
           "legendFormat": "{{assistant}}",
           "refId": "C"
         }
@@ -988,12 +834,12 @@
       },
       "targets": [
         {
-          "expr": "librechat_agent_usage_count",
+          "expr": "increase(librechat_agent_usage_count[$__range])",
           "legendFormat": "{{agent}}",
           "refId": "A"
         },
         {
-          "expr": "librechat_assistant_usage_count",
+          "expr": "increase(librechat_assistant_usage_count[$__range])",
           "legendFormat": "{{assistant}}",
           "refId": "B"
         }
@@ -1063,7 +909,7 @@
       },
       "targets": [
         {
-          "expr": "librechat_user_provider_count",
+          "expr": "increase(librechat_user_provider_count[$__range])",
           "legendFormat": "{{provider}}",
           "refId": "A"
         }
@@ -1077,19 +923,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1134,19 +967,6 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1228,19 +1048,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1315,19 +1122,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1402,19 +1196,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1451,7 +1232,7 @@
       },
       "targets": [
         {
-          "expr": "librechat_tool_call_count_by_tool",
+          "expr": "increase(librechat_tool_call_count_by_tool[$__range])",
           "legendFormat": "Tool Calls ({{toolId}})",
           "refId": "A"
         }
@@ -1481,19 +1262,6 @@
             "mode": "palette-classic"
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1530,23 +1298,10 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Sum and average cost usage by token type (we show them as two separate gauge queries).",
+      "description": "This gauge displays the cost metrics broken down by token type (sum and average).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1588,39 +1343,26 @@
       },
       "targets": [
         {
-          "expr": "librechat_transaction_cost_sum",
+          "expr": "increase(librechat_transaction_cost_sum[$__range])",
           "legendFormat": "Sum ({{tokenType}})",
           "refId": "A"
         },
         {
-          "expr": "librechat_transaction_cost_avg",
+          "expr": "increase(librechat_transaction_cost_avg[$__range])",
           "legendFormat": "Avg ({{tokenType}})",
           "refId": "B"
         }
       ],
-      "title": "Transaction Token Usage (By Token Type)",
+      "title": "Transaction Cost by Token Type",
       "type": "bargauge"
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Total tokens from all transactions.",
+      "description": "🔢 Transaction Token Metrics",
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -1628,7 +1370,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 75
+        "y": 71
       },
       "id": 123,
       "options": {
@@ -1660,24 +1402,11 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Average tokens per transaction.",
+      "description": "🔢 Transaction Token Metrics",
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -1685,7 +1414,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 75
+        "y": 71
       },
       "id": 124,
       "options": {
@@ -1716,67 +1445,138 @@
       "type": "stat"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "id": 130,
+      "panels": [],
+      "title": "🔢 Token Metrics",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 79
+      },
+      "id": 131,
+      "panels": [],
+      "title": "💰 Cost Metrics",
+      "type": "row"
+    },
+    {
       "datasource": "$prometheusDS",
-      "description": "Transaction cost in USD per deployed model.",
+      "description": "This panel shows total transaction cost (USD), transaction count, balance count, and cost per user.",
       "fieldConfig": {
         "defaults": {
-          "unit": "usd",
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "unit": "currencyUSD"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 24,
+        "h": 16,
+        "w": 6,
         "x": 0,
-        "y": 83
+        "y": 85
       },
-      "id": 125,
+      "id": 132,
       "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "show": true,
-          "showLegend": true
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "orientation": "vertical",
-        "showValue": "auto",
-        "stacking": "none",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        },
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "targets": [
         {
-          "expr": "librechat_transaction_cost_per_model",
+          "expr": "increase(librechat_transaction_cost_total_usd[$__range])",
+          "legendFormat": "Transaction Cost (USD)",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(librechat_transaction_cost_per_user[$__range])",
+          "legendFormat": "Cost per User (USD)",
+          "refId": "B"
+        }
+      ],
+      "title": "Transactions & Cost Metrics (Total)",
+      "type": "stat"
+    },
+    {
+      "datasource": "$prometheusDS",
+      "description": "Transaction cost (USD) per deployed model, aggregated over the selected time range.",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 18,
+        "x": 6,
+        "y": 85
+      },
+      "id": 125,
+      "options": {
+        "dimensions": {
+          "additionalLabels": [],
+          "colorBy": "Tile size",
+          "groupBy": "",
+          "labelBy": "Tile label",
+          "sizeBy": "Tile size"
+        },
+        "display": {
+          "tilingAlgorithm": "squarified"
+        },
+        "fieldOptions": {
+          "separator": ""
+        },
+        "tiling": "treemapSquarify"
+      },
+      "pluginVersion": "2.0.1",
+      "targets": [
+        {
+          "expr": "increase(librechat_transaction_cost_per_model[$__range])",
           "legendFormat": "{{model}}",
           "refId": "A"
         }
       ],
       "title": "Transaction Cost per Model",
-      "type": "barchart"
+      "transformations": [
+        {
+          "id": "seriesToRows",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "lastNotNull": "Tile size",
+              "model": "Tile label"
+            }
+          }
+        }
+      ],
+      "type": "marcusolsson-treemap-panel"
     }
   ]
 }

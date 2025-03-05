@@ -164,7 +164,7 @@ export const advancedGauges = {
 
 export async function updateAdvancedMetrics(): Promise<void> {
     try {
-        // Message metrics
+        // --- Message Token Metrics ---
         const tokenSumAgg = await Message.aggregate([
             { $group: { _id: null, total: { $sum: '$tokenCount' } } }
         ]);
@@ -260,29 +260,48 @@ export async function updateAdvancedMetrics(): Promise<void> {
         ]);
         advancedGauges.conversationMessageAvg.set(convAgg[0]?.avgMessages || 0);
 
-        // --- Transaction Metrics ---
+        // --- Transaction Token Metrics (Separate from cost) ---
         const transactions = await Transaction.find({});
-        const txnByType: Record<string, { total: number; count: number }> = {};
         let tokensSum = 0;
+        for (const tx of transactions) {
+            const rawAmount: number = typeof tx.rawAmount === 'number' ? tx.rawAmount : 0;
+            tokensSum += Math.abs(rawAmount);
+        }
+        const txnCount: number = transactions.length;
+        const tokenAvg: number = txnCount > 0 ? tokensSum / txnCount : 0;
+        advancedGauges.transactionTokenSum.set(tokensSum);
+        advancedGauges.transactionTokenAvg.set(tokenAvg);
+
+        // --- Transaction Cost Metrics ---
+        const txnCostByType: Record<string, { total: number; count: number }> = {};
         const modelCostMap: Record<string, { total: number; count: number }> = {};
+        let totalCostUSD = 0;
 
         for (const tx of transactions) {
+            // Ignore transactions with missing or unknown model.
+            if (!tx.model || (typeof tx.model === 'string' && tx.model.toLowerCase() === 'unknown')) {
+                continue;
+            }
+
             const rawAmount: number = typeof tx.rawAmount === 'number' ? tx.rawAmount : 0;
             const tokenType: string = tx.tokenType || 'unknown';
             const effectiveModel: string = tx.model;
 
+            // Compute the token value and convert it to USD.
             const tokenValue: number = typeof tx.tokenValue === 'number'
                 ? tx.tokenValue
                 : Math.abs(rawAmount) * (typeof tx.rate === 'number' ? tx.rate : 1);
             const costUSD: number = Math.abs(tokenValue) / 1e6;
-            tokensSum += Math.abs(rawAmount);
+            totalCostUSD += costUSD;
 
-            if (!txnByType[tokenType]) {
-                txnByType[tokenType] = { total: 0, count: 0 };
+            // Group by token type for cost calculations.
+            if (!txnCostByType[tokenType]) {
+                txnCostByType[tokenType] = { total: 0, count: 0 };
             }
-            txnByType[tokenType].total += costUSD;
-            txnByType[tokenType].count += 1;
+            txnCostByType[tokenType].total += costUSD;
+            txnCostByType[tokenType].count += 1;
 
+            // Group cost per model.
             if (!modelCostMap[effectiveModel]) {
                 modelCostMap[effectiveModel] = { total: 0, count: 0 };
             }
@@ -290,26 +309,22 @@ export async function updateAdvancedMetrics(): Promise<void> {
             modelCostMap[effectiveModel].count += 1;
         }
 
+        // Update cost gauges by token type.
         advancedGauges.transactionCostSum.reset();
         advancedGauges.transactionCostAvg.reset();
-        let totalCostUSD = 0;
-        for (const type in txnByType) {
-            const { total, count } = txnByType[type];
+        for (const type in txnCostByType) {
+            const { total, count } = txnCostByType[type];
             advancedGauges.transactionCostSum.set({ tokenType: type }, total);
             advancedGauges.transactionCostAvg.set({ tokenType: type }, count > 0 ? total / count : 0);
-            totalCostUSD += total;
         }
         advancedGauges.transactionCostTotalUSD.set(totalCostUSD);
 
-        const txnCount: number = transactions.length;
-        const tokenAvg: number = txnCount > 0 ? tokensSum / txnCount : 0;
-        advancedGauges.transactionTokenSum.set(tokensSum);
-        advancedGauges.transactionTokenAvg.set(tokenAvg);
-
+        // Cost per user.
         const userCount: number = await User.countDocuments({});
         const costPerUser: number = userCount > 0 ? totalCostUSD / userCount : 0;
         advancedGauges.transactionCostPerUser.set(costPerUser);
 
+        // Cost per deployed model.
         advancedGauges.transactionCostPerModel.reset();
         for (const model in modelCostMap) {
             const { total } = modelCostMap[model];
