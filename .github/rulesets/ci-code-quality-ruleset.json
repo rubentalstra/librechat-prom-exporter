@@ -1,0 +1,41 @@
+{
+  "name": "Protect main branch",
+  "target": "branch",
+  "source_type": "Repository",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "main"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "type": "status_check",
+      "parameters": {
+        "context": "build_test",
+        "required": true
+      }
+    },
+    {
+      "type": "status_check",
+      "parameters": {
+        "context": "static_analysis",
+        "required": true
+      }
+    },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "require_code_owner_review": true,
+        "require_last_push_approval": true,
+        "dismiss_stale_reviews_on_push": true,
+        "required_approving_review_count": 1,
+        "required_review_thread_resolution": false
+      }
+    }
+  ],
+  "bypass_actors": []
+}
