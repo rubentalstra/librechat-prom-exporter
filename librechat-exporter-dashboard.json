@@ -1454,13 +1454,6 @@
           "color": {
             "mode": "palette-classic"
           },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -1511,7 +1504,7 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Displays both sum and average transaction token usage over the selected time range as bar gauges (prompt vs. completion).",
+      "description": "Displays both sum and average transaction cost usage (delta) over the selected time range.",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1581,6 +1574,183 @@
       ],
       "title": "Transaction Token Usage (Delta)",
       "type": "bargauge"
+    },
+    {
+      "datasource": "$prometheusDS",
+      "description": "Total tokens from transactions (absolute sum).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 75
+      },
+      "id": 123,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "expr": "librechat_transaction_token_sum",
+          "legendFormat": "Transaction Token Sum",
+          "refId": "A"
+        }
+      ],
+      "title": "Transaction Token Sum",
+      "type": "stat"
+    },
+    {
+      "datasource": "$prometheusDS",
+      "description": "Average tokens per transaction (absolute average).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 75
+      },
+      "id": 124,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "expr": "librechat_transaction_token_avg",
+          "legendFormat": "Transaction Token Avg",
+          "refId": "A"
+        }
+      ],
+      "title": "Transaction Token Average",
+      "type": "stat"
+    },
+    {
+      "datasource": "$prometheusDS",
+      "description": "Average transaction cost in USD per deployed model (grouped by model).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "usd",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 83
+      },
+      "id": 125,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "show": true,
+          "showLegend": true
+        },
+        "orientation": "vertical",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "expr": "librechat_transaction_cost_per_model",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Transaction Cost per Model (Avg)",
+      "type": "barchart"
     }
   ]
 }
