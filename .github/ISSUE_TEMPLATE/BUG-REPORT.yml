@@ -1,0 +1,77 @@
+name: Bug Report
+description: Report a bug in the LibreChat Prometheus Exporter application or the Grafana dashboard
+title: "[Bug]: "
+labels: ["🐛 bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report for LibreChat Prometheus Exporter!
+        
+        Before submitting, please:
+        - Search existing [Issues and Discussions](https://github.com/rubentalstra/librechat-prom-exporter/discussions) to see if your bug has already been reported.
+        - Confirm whether the issue affects the exporter service, the Grafana dashboard, or both.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the issue you encountered (include details about whether it's related to the exporter or the Grafana dashboard).
+      placeholder: Please provide as many details as possible.
+    validations:
+      required: true
+  - type: textarea
+    id: version-info
+    attributes:
+      label: Version Information
+      description: |
+        If using Docker, please run and provide the output of:
+        ```bash
+        docker images | grep librechat-prom-exporter
+        ```
+        If running from source, please run and provide the output of:
+        ```bash
+        git rev-parse HEAD
+        ```
+      placeholder: Paste the output here.
+    validations:
+      required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: List the steps needed to reproduce the issue.
+      placeholder: "1. Step 1\n2. Step 2\n3. Step 3"
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which component is affected?
+      multiple: true
+      options:
+        - Exporter
+        - Grafana Dashboard
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: |
+        Please paste any relevant logs that were generated when reproducing the issue.
+        
+        For Docker logs, check the container logs.
+        
+        For local runs, include the console output if possible.
+      render: shell
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/rubentalstra/librechat-prom-exporter/blob/main/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
