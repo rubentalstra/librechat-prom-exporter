@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM node:22-alpine as builder
+FROM node:23-alpine as builder
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ COPY src ./src
 RUN npm run build
 
 # Stage 2: Create the production container
-FROM node:22-alpine
+FROM node:23-alpine
 
 WORKDIR /app
 
