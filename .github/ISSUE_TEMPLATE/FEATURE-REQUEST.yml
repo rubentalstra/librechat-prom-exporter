@@ -1,0 +1,50 @@
+name: Feature Request
+description: Request a new endpoint or additional metrics for LibreChat Prometheus Exporter
+title: "[Enhancement]: "
+labels: ["✨ enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to suggest an enhancement for LibreChat Prometheus Exporter!
+        
+        Please describe the endpoints or metrics you feel are missing and how they would improve the project.
+  - type: textarea
+    id: what
+    attributes:
+      label: Which endpoints/metrics are missing?
+      description: Please provide a detailed description of the endpoints or metrics you would like to see added.
+      placeholder: Describe your feature request in detail.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Additional Details
+      description: Provide any additional details or context regarding your request.
+      placeholder: Any extra details you’d like to share.
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which component does your request affect?
+      multiple: true
+      options:
+        - Exporter
+        - Grafana Dashboard
+        - Both
+        - Other
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Supporting Images
+      description: If applicable, please include images to help clarify your request.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/rubentalstra/librechat-prom-exporter/blob/main/CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
