@@ -12,7 +12,7 @@ const ProjectSchema = new Schema(
       promptGroupIds: { type: [Schema.Types.ObjectId], ref: 'PromptGroup', default: [] },
       agentIds: { type: [String], ref: 'Agent', default: [] },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.model<IProject>('Project', ProjectSchema);

@@ -27,7 +27,7 @@ const ConversationSchema = new Schema(
         files: { type: [String] },
         expiredAt: { type: Date },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 // Expire conversation documents when expiredAt is reached

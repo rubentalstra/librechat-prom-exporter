@@ -14,7 +14,7 @@ const PluginAuthSchema = new Schema(
         userId: { type: String, required: true },
         pluginKey: { type: String },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.models.PluginAuth ||

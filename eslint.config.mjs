@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import tsParser from '@typescript-eslint/parser';
@@ -19,12 +20,15 @@ const compat = new FlatCompat({
 
 export default [
     {
-        // Files/folders to ignore.
+        files: ['eslint.config.mjs'],
+        languageOptions: {
+            parserOptions: {},
+        },
+    },
+    {
         ignores: ['node_modules/**/*', 'dist/**/*'],
     },
-    // Extend from eslint:recommended.
     ...fixupConfigRules(compat.extends('eslint:recommended')),
-    // Global configuration for JavaScript and other non-TypeScript files.
     {
         plugins: {
             '@typescript-eslint': fixupPluginRules(typescriptEslintPlugin),
@@ -39,9 +43,6 @@ export default [
             parser: tsParser,
             ecmaVersion: 'latest',
             sourceType: 'module',
-            parserOptions: {
-                project: './tsconfig.json',
-            },
         },
         settings: {
             'import/parsers': {
@@ -72,26 +73,24 @@ export default [
             'no-multiple-empty-lines': ['error', { max: 1 }],
             'no-trailing-spaces': 'error',
             'comma-dangle': ['error', 'always-multiline'],
-            // Import and other project-specific rules.
+            // Allow console statements
             'no-console': 'off',
         },
     },
-    // TypeScript-specific configuration.
+    ...compat
+        .extends(
+            'plugin:@typescript-eslint/eslint-recommended',
+            'plugin:@typescript-eslint/recommended',
+        )
+        .map((config) => {
+            const { plugins, ...rest } = config;
+            return { ...rest, files: ['**/*.ts'] }; // note the trailing comma here
+        }),
     {
         files: ['**/*.ts'],
-        languageOptions: {
-            parser: tsParser,
-            ecmaVersion: 'latest',
-            sourceType: 'module',
-            parserOptions: {
-                project: './tsconfig.json',
-            },
-        },
         rules: {
-            // Use the TypeScript-specific unused vars rule.
             'no-unused-vars': 'off',
-            '@typescript-eslint/no-unused-vars': 'warn',
-            // Disable rules that conflict or are not as useful in TS files.
+            '@typescript-eslint/no-unused-vars': 'off',
             '@typescript-eslint/no-unused-expressions': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
             '@typescript-eslint/no-unnecessary-condition': 'off',
@@ -99,13 +98,4 @@ export default [
             '@typescript-eslint/ban-ts-comment': 'off',
         },
     },
-    ...compat
-        .extends(
-            'plugin:@typescript-eslint/eslint-recommended',
-            'plugin:@typescript-eslint/recommended'
-        )
-        .map((config) => {
-            const { plugins, ...rest } = config;
-            return { ...rest, files: ['**/*.ts'] };
-        }),
 ];

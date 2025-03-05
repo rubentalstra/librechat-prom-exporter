@@ -21,7 +21,7 @@ const PresetSchema = new Schema(
         ...conversationPreset,
         agentOptions: { type: Schema.Types.Mixed, default: null },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.models.Preset ||

@@ -18,7 +18,7 @@ const BannerSchema = new Schema(
       type: { type: String, enum: ['banner', 'popup'], default: 'banner' },
       isPublic: { type: Boolean, default: false },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.model<IBanner>('Banner', BannerSchema);

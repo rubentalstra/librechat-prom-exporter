@@ -34,11 +34,11 @@ const PromptGroupSchema = new Schema(
             },
             maxlength: [
                 56,
-                `Command cannot be longer than 56 characters`
+                `Command cannot be longer than 56 characters`,
             ],
         },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 PromptGroupSchema.index({ createdAt: 1, updatedAt: 1 });

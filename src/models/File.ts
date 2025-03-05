@@ -44,7 +44,7 @@ const FileSchema = new Schema(
       metadata: { fileIdentifier: String },
       expiresAt: { type: Date, expires: 3600 },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 FileSchema.index({ createdAt: 1, updatedAt: 1 });

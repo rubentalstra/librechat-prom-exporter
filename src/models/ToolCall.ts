@@ -22,7 +22,7 @@ const ToolCallSchema = new Schema(
       blockIndex: Number,
       partIndex: Number,
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 ToolCallSchema.index({ messageId: 1, user: 1 });

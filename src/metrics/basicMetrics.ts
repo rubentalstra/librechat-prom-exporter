@@ -20,7 +20,7 @@ import {
     SharedLink,
     Token,
     ToolCall,
-    Transaction
+    Transaction,
 } from '../models';
 
 export const basicGauges = {

@@ -18,7 +18,7 @@ const SharedLinkSchema = new Schema(
         shareId: { type: String, index: true },
         isPublic: { type: Boolean, default: true },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.model<ISharedLink>('SharedLink', SharedLinkSchema);

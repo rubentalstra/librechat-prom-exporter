@@ -31,7 +31,7 @@ const TransactionSchema = new Schema(
         writeTokens: Number,
         readTokens: Number,
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.model<ITransaction>('Transaction', TransactionSchema);

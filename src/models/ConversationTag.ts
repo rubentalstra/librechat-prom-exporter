@@ -16,7 +16,7 @@ const ConversationTagSchema = new Schema(
       count: { type: Number, default: 0 },
       position: { type: Number, default: 0, index: true },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 ConversationTagSchema.index({ tag: 1, user: 1 }, { unique: true });

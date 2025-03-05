@@ -72,7 +72,7 @@ const MessageSchema = new Schema(
       attachments: { type: [{ type: Schema.Types.Mixed }], default: undefined },
       expiredAt: { type: Date },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 MessageSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });

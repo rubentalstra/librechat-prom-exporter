@@ -38,7 +38,7 @@ const AuthSchema = new Schema(
       scope: String,
       token_exchange_method: { type: String, enum: ['default_post', 'basic_auth_header', null] },
     },
-    { _id: false }
+    { _id: false },
 );
 
 const ActionSchema = new Schema({

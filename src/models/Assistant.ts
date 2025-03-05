@@ -22,7 +22,7 @@ const AssistantSchema = new Schema(
       actions: { type: [String], default: undefined },
       append_current_datetime: { type: Boolean, default: false },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.model<IAssistant>('Assistant', AssistantSchema);

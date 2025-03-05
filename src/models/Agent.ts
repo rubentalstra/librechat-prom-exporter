@@ -51,7 +51,7 @@ const AgentSchema = new Schema(
       tool_resources: { type: Schema.Types.Mixed, default: {} },
       projectIds: { type: [mongoose.Schema.Types.ObjectId], ref: 'Project', index: true },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.model<IAgent>('Agent', AgentSchema);

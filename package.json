@@ -7,7 +7,7 @@
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "lint": "eslint . --ext .ts"
+    "lint": "npx eslint . --ext .ts --config eslint.config.mjs"
   },
   "repository": {
     "type": "git",

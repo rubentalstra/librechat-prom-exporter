@@ -65,7 +65,7 @@ const UserSchema = new Schema(
         expiresAt: { type: Date, expires: 604800 },
         termsAccepted: { type: Boolean, default: false },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export default mongoose.model<IUser>('User', UserSchema);

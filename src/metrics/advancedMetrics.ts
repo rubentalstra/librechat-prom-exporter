@@ -11,7 +11,7 @@ import {
     ToolCall,
     Conversation,
     Transaction,
-    Action
+    Action,
 } from '../models';
 
 // Advanced gauges including updated transaction cost metrics and new cost-per-user/model gauges.
@@ -19,124 +19,124 @@ export const advancedGauges = {
     // Message metrics
     messageTokenSum: new client.Gauge({
         name: 'librechat_message_token_sum',
-        help: 'Sum of tokenCount for all messages'
+        help: 'Sum of tokenCount for all messages',
     }),
     messageTokenAvg: new client.Gauge({
         name: 'librechat_message_token_avg',
-        help: 'Average tokenCount for messages'
+        help: 'Average tokenCount for messages',
     }),
     errorMessageCount: new client.Gauge({
         name: 'librechat_error_message_count',
-        help: 'Count of messages with error'
+        help: 'Count of messages with error',
     }),
     messageWithAttachmentsCount: new client.Gauge({
         name: 'librechat_message_with_attachments_count',
-        help: 'Count of messages with attachments'
+        help: 'Count of messages with attachments',
     }),
     messagePluginUsagePercent: new client.Gauge({
         name: 'librechat_message_plugin_usage_percent',
-        help: 'Percentage of messages that use a plugin'
+        help: 'Percentage of messages that use a plugin',
     }),
 
     // Banner metrics
     activeBannerCount: new client.Gauge({
         name: 'librechat_active_banner_count',
-        help: 'Count of banners currently active'
+        help: 'Count of banners currently active',
     }),
 
     // File metrics
     fileTotalBytes: new client.Gauge({
         name: 'librechat_file_total_bytes',
-        help: 'Total bytes of all files'
+        help: 'Total bytes of all files',
     }),
     fileAvgBytes: new client.Gauge({
         name: 'librechat_file_avg_bytes',
-        help: 'Average file size in bytes'
+        help: 'Average file size in bytes',
     }),
 
     // User metrics
     userProviderCount: new client.Gauge({
         name: 'librechat_user_provider_count',
         help: 'Count of users by provider',
-        labelNames: ['provider']
+        labelNames: ['provider'],
     }),
     activeUserCount: new client.Gauge({
         name: 'librechat_active_users',
-        help: 'Number of active users within the last 5 minutes'
+        help: 'Number of active users within the last 5 minutes',
     }),
 
     // Session metrics
     sessionAvgDuration: new client.Gauge({
         name: 'librechat_session_avg_duration',
-        help: 'Average session duration in seconds'
+        help: 'Average session duration in seconds',
     }),
 
     // Prompt Group metrics
     promptGroupGenerationsAvg: new client.Gauge({
         name: 'librechat_prompt_group_generations_avg',
-        help: 'Average number of generations in prompt groups'
+        help: 'Average number of generations in prompt groups',
     }),
 
     // Prompt metrics
     promptCountByType: new client.Gauge({
         name: 'librechat_prompt_count_by_type',
         help: 'Count of prompts by type',
-        labelNames: ['type']
+        labelNames: ['type'],
     }),
 
     // Tool Call metrics
     toolCallCountByTool: new client.Gauge({
         name: 'librechat_tool_call_count_by_tool',
         help: 'Count of tool calls by toolId',
-        labelNames: ['toolId']
+        labelNames: ['toolId'],
     }),
 
     // Conversation metrics
     conversationMessageAvg: new client.Gauge({
         name: 'librechat_conversation_message_avg',
-        help: 'Average number of messages per conversation'
+        help: 'Average number of messages per conversation',
     }),
 
     // Transaction cost metrics – recalculated using provided transaction data.
     transactionCostSum: new client.Gauge({
         name: 'librechat_transaction_cost_sum',
         help: 'Sum of transaction cost in USD by token type',
-        labelNames: ['tokenType']
+        labelNames: ['tokenType'],
     }),
     transactionCostAvg: new client.Gauge({
         name: 'librechat_transaction_cost_avg',
         help: 'Average transaction cost in USD by token type',
-        labelNames: ['tokenType']
+        labelNames: ['tokenType'],
     }),
     transactionCostTotalUSD: new client.Gauge({
         name: 'librechat_transaction_cost_total_usd',
-        help: 'Total transaction cost in USD (aggregated over all token types)'
+        help: 'Total transaction cost in USD (aggregated over all token types)',
     }),
     transactionCostPerUser: new client.Gauge({
         name: 'librechat_transaction_cost_per_user',
-        help: 'Average transaction cost in USD per user'
+        help: 'Average transaction cost in USD per user',
     }),
     transactionCostPerModel: new client.Gauge({
         name: 'librechat_transaction_cost_per_model',
         help: 'Total transaction cost in USD per deployed model',
-        labelNames: ['model']
+        labelNames: ['model'],
     }),
 
     // Transaction token metrics – sum and average of tokens from transactions.
     transactionTokenSum: new client.Gauge({
         name: 'librechat_transaction_token_sum',
-        help: 'Sum of tokens (absolute rawAmount) from all transactions'
+        help: 'Sum of tokens (absolute rawAmount) from all transactions',
     }),
     transactionTokenAvg: new client.Gauge({
         name: 'librechat_transaction_token_avg',
-        help: 'Average tokens (absolute rawAmount) per transaction'
+        help: 'Average tokens (absolute rawAmount) per transaction',
     }),
 
     // Action metrics
     actionCountByType: new client.Gauge({
         name: 'librechat_action_count_by_type',
         help: 'Count of actions by type',
-        labelNames: ['type']
+        labelNames: ['type'],
     }),
 
     // New: Separate gauges for deployed models, agents, and assistants.
@@ -144,34 +144,34 @@ export const advancedGauges = {
     deployedModelUsageCount: new client.Gauge({
         name: 'librechat_model_usage_count',
         help: 'Usage count for each deployed model',
-        labelNames: ['model']
+        labelNames: ['model'],
     }),
     agentUsageCount: new client.Gauge({
         name: 'librechat_agent_usage_count',
         help: 'Usage count for each agent',
-        labelNames: ['agent']
+        labelNames: ['agent'],
     }),
     assistantUsageCount: new client.Gauge({
         name: 'librechat_assistant_usage_count',
         help: 'Usage count for each assistant',
-        labelNames: ['assistant']
+        labelNames: ['assistant'],
     }),
     deployedModelNamesCount: new client.Gauge({
         name: 'librechat_deployed_model_names_count',
-        help: 'Total number of distinct deployed model names found in messages'
-    })
+        help: 'Total number of distinct deployed model names found in messages',
+    }),
 };
 
 export async function updateAdvancedMetrics(): Promise<void> {
     try {
         // --- Message Token Metrics ---
         const tokenSumAgg = await Message.aggregate([
-            { $group: { _id: null, total: { $sum: '$tokenCount' } } }
+            { $group: { _id: null, total: { $sum: '$tokenCount' } } },
         ]);
         advancedGauges.messageTokenSum.set(tokenSumAgg[0]?.total || 0);
 
         const tokenAvgAgg = await Message.aggregate([
-            { $group: { _id: null, avg: { $avg: '$tokenCount' } } }
+            { $group: { _id: null, avg: { $avg: '$tokenCount' } } },
         ]);
         advancedGauges.messageTokenAvg.set(tokenAvgAgg[0]?.avg || 0);
 
@@ -190,20 +190,20 @@ export async function updateAdvancedMetrics(): Promise<void> {
         const now = new Date();
         const activeBanners = await Banner.countDocuments({
             displayFrom: { $lte: now },
-            $or: [{ displayTo: null }, { displayTo: { $gte: now } }]
+            $or: [{ displayTo: null }, { displayTo: { $gte: now } }],
         });
         advancedGauges.activeBannerCount.set(activeBanners);
 
         // File metrics
         const fileBytesAgg = await File.aggregate([
-            { $group: { _id: null, totalBytes: { $sum: '$bytes' }, avgBytes: { $avg: '$bytes' } } }
+            { $group: { _id: null, totalBytes: { $sum: '$bytes' }, avgBytes: { $avg: '$bytes' } } },
         ]);
         advancedGauges.fileTotalBytes.set(fileBytesAgg[0]?.totalBytes || 0);
         advancedGauges.fileAvgBytes.set(fileBytesAgg[0]?.avgBytes || 0);
 
         // User metrics
         const userProviderAgg = await User.aggregate([
-            { $group: { _id: '$provider', count: { $sum: 1 } } }
+            { $group: { _id: '$provider', count: { $sum: 1 } } },
         ]);
         advancedGauges.userProviderCount.reset();
         for (const result of userProviderAgg) {
@@ -215,7 +215,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         const activeUserAgg = await Message.aggregate<{ activeUsers: number }>([
             { $match: { createdAt: { $gte: fiveMinutesAgo } } },
             { $group: { _id: '$user' } },
-            { $count: 'activeUsers' }
+            { $count: 'activeUsers' },
         ]);
         const activeUsers: number = activeUserAgg.length > 0 ? activeUserAgg[0].activeUsers : 0;
         advancedGauges.activeUserCount.set(activeUsers);
@@ -223,19 +223,19 @@ export async function updateAdvancedMetrics(): Promise<void> {
         // Session metrics
         const sessionAgg = await Session.aggregate([
             { $project: { duration: { $subtract: ['$expiration', '$createdAt'] } } },
-            { $group: { _id: null, avgDuration: { $avg: '$duration' } } }
+            { $group: { _id: null, avgDuration: { $avg: '$duration' } } },
         ]);
         advancedGauges.sessionAvgDuration.set((sessionAgg[0]?.avgDuration || 0) / 1000);
 
         // Prompt Group metrics
         const promptGroupAgg = await PromptGroup.aggregate([
-            { $group: { _id: null, avgGenerations: { $avg: '$numberOfGenerations' } } }
+            { $group: { _id: null, avgGenerations: { $avg: '$numberOfGenerations' } } },
         ]);
         advancedGauges.promptGroupGenerationsAvg.set(promptGroupAgg[0]?.avgGenerations || 0);
 
         // Prompt metrics
         const promptAgg = await Prompt.aggregate([
-            { $group: { _id: '$type', count: { $sum: 1 } } }
+            { $group: { _id: '$type', count: { $sum: 1 } } },
         ]);
         advancedGauges.promptCountByType.reset();
         for (const result of promptAgg) {
@@ -245,7 +245,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         // Tool Call metrics
         const toolCallAgg = await ToolCall.aggregate([
-            { $group: { _id: '$toolId', count: { $sum: 1 } } }
+            { $group: { _id: '$toolId', count: { $sum: 1 } } },
         ]);
         advancedGauges.toolCallCountByTool.reset();
         for (const result of toolCallAgg) {
@@ -256,7 +256,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         // Conversation metrics
         const convAgg = await Conversation.aggregate([
             { $project: { msgCount: { $size: '$messages' } } },
-            { $group: { _id: null, avgMessages: { $avg: '$msgCount' } } }
+            { $group: { _id: null, avgMessages: { $avg: '$msgCount' } } },
         ]);
         advancedGauges.conversationMessageAvg.set(convAgg[0]?.avgMessages || 0);
 
@@ -333,7 +333,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         // Action metrics
         const actionAgg = await Action.aggregate([
-            { $group: { _id: '$type', count: { $sum: 1 } } }
+            { $group: { _id: '$type', count: { $sum: 1 } } },
         ]);
         advancedGauges.actionCountByType.reset();
         for (const result of actionAgg) {
@@ -345,7 +345,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         // Group messages by their "model" field.
         const deployedModelsAgg = await Message.aggregate([
             { $match: { model: { $ne: null } } },
-            { $group: { _id: '$model', count: { $sum: 1 } } }
+            { $group: { _id: '$model', count: { $sum: 1 } } },
         ]);
 
         // Get agent (or assistant) names from Agent collection based on their id.
@@ -384,7 +384,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         // Also count the total number of distinct deployed model names (only models, excluding agents/assistants).
         const distinctModelsAgg = await Message.aggregate([
             { $match: { model: { $ne: null } } },
-            { $group: { _id: '$model' } }
+            { $group: { _id: '$model' } },
         ]);
         const filteredDistinctModels = distinctModelsAgg.filter(doc => {
             const id: string = doc._id;
