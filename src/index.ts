@@ -24,7 +24,8 @@ for (const gauge of Object.values(advancedGauges)) {
 
 // Connect to MongoDB (adjust the URI as needed)
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/librechat';
-mongoose.connect(mongoURI)
+mongoose
+    .connect(mongoURI)
     .then(() => console.log('Connected to MongoDB'))
     .catch((error: Error) => {
         console.error('MongoDB connection error:', error);

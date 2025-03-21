@@ -14,7 +14,6 @@ import {
     Action,
 } from '../models';
 
-// Advanced gauges including updated transaction cost metrics and new cost-per-user/model gauges.
 export const advancedGauges = {
     // Message metrics
     messageTokenSum: new client.Gauge({
@@ -139,8 +138,7 @@ export const advancedGauges = {
         labelNames: ['type'],
     }),
 
-    // New: Separate gauges for deployed models, agents, and assistants.
-    // Only count messages for models that are not agents or assistants.
+    // Deployed models, agents, and assistants metrics
     deployedModelUsageCount: new client.Gauge({
         name: 'librechat_model_usage_count',
         help: 'Usage count for each deployed model',
@@ -164,29 +162,32 @@ export const advancedGauges = {
 
 export async function updateAdvancedMetrics(): Promise<void> {
     try {
-        // --- Message Token Metrics ---
-        const tokenSumAgg = await Message.aggregate([
-            { $group: { _id: null, total: { $sum: '$tokenCount' } } },
+        // --- Message Metrics (run concurrently) ---
+        const [
+            tokenSumAgg,
+            tokenAvgAgg,
+            errorCount,
+            msgWithAttachCount,
+            totalMsgCount,
+            pluginUsageCount,
+        ] = await Promise.all([
+            Message.aggregate([{ $group: { _id: null, total: { $sum: '$tokenCount' } } }]),
+            Message.aggregate([{ $group: { _id: null, avg: { $avg: '$tokenCount' } } }]),
+            Message.countDocuments({ error: true }),
+            Message.countDocuments({ attachments: { $exists: true, $ne: [] } }),
+            Message.countDocuments({}),
+            Message.countDocuments({ plugin: { $exists: true, $ne: null } }),
         ]);
+
         advancedGauges.messageTokenSum.set(tokenSumAgg[0]?.total || 0);
-
-        const tokenAvgAgg = await Message.aggregate([
-            { $group: { _id: null, avg: { $avg: '$tokenCount' } } },
-        ]);
         advancedGauges.messageTokenAvg.set(tokenAvgAgg[0]?.avg || 0);
-
-        const errorCount = await Message.countDocuments({ error: true });
         advancedGauges.errorMessageCount.set(errorCount);
-
-        const msgWithAttachCount = await Message.countDocuments({ attachments: { $exists: true, $ne: [] } });
         advancedGauges.messageWithAttachmentsCount.set(msgWithAttachCount);
-
-        const totalMsgCount = await Message.countDocuments({});
-        const pluginUsageCount = await Message.countDocuments({ plugin: { $exists: true, $ne: null } });
-        const pluginUsagePercent = totalMsgCount > 0 ? (pluginUsageCount / totalMsgCount) * 100 : 0;
+        const pluginUsagePercent =
+            totalMsgCount > 0 ? (pluginUsageCount / totalMsgCount) * 100 : 0;
         advancedGauges.messagePluginUsagePercent.set(pluginUsagePercent);
 
-        // Banner metrics
+        // --- Banner Metrics ---
         const now = new Date();
         const activeBanners = await Banner.countDocuments({
             displayFrom: { $lte: now },
@@ -194,14 +195,20 @@ export async function updateAdvancedMetrics(): Promise<void> {
         });
         advancedGauges.activeBannerCount.set(activeBanners);
 
-        // File metrics
+        // --- File Metrics ---
         const fileBytesAgg = await File.aggregate([
-            { $group: { _id: null, totalBytes: { $sum: '$bytes' }, avgBytes: { $avg: '$bytes' } } },
+            {
+                $group: {
+                    _id: null,
+                    totalBytes: { $sum: '$bytes' },
+                    avgBytes: { $avg: '$bytes' },
+                },
+            },
         ]);
         advancedGauges.fileTotalBytes.set(fileBytesAgg[0]?.totalBytes || 0);
         advancedGauges.fileAvgBytes.set(fileBytesAgg[0]?.avgBytes || 0);
 
-        // User metrics
+        // --- User Metrics ---
         const userProviderAgg = await User.aggregate([
             { $group: { _id: '$provider', count: { $sum: 1 } } },
         ]);
@@ -211,29 +218,31 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.userProviderCount.set({ provider }, result.count);
         }
 
+        // --- Active Users in Last 5 Minutes ---
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const activeUserAgg = await Message.aggregate<{ activeUsers: number }>([
+        const activeUserAgg = await Message.aggregate([
             { $match: { createdAt: { $gte: fiveMinutesAgo } } },
             { $group: { _id: '$user' } },
             { $count: 'activeUsers' },
         ]);
-        const activeUsers: number = activeUserAgg.length > 0 ? activeUserAgg[0].activeUsers : 0;
+        const activeUsers: number =
+            activeUserAgg.length > 0 ? activeUserAgg[0].activeUsers : 0;
         advancedGauges.activeUserCount.set(activeUsers);
 
-        // Session metrics
+        // --- Session Metrics ---
         const sessionAgg = await Session.aggregate([
             { $project: { duration: { $subtract: ['$expiration', '$createdAt'] } } },
             { $group: { _id: null, avgDuration: { $avg: '$duration' } } },
         ]);
         advancedGauges.sessionAvgDuration.set((sessionAgg[0]?.avgDuration || 0) / 1000);
 
-        // Prompt Group metrics
+        // --- Prompt Group Metrics ---
         const promptGroupAgg = await PromptGroup.aggregate([
             { $group: { _id: null, avgGenerations: { $avg: '$numberOfGenerations' } } },
         ]);
         advancedGauges.promptGroupGenerationsAvg.set(promptGroupAgg[0]?.avgGenerations || 0);
 
-        // Prompt metrics
+        // --- Prompt Metrics ---
         const promptAgg = await Prompt.aggregate([
             { $group: { _id: '$type', count: { $sum: 1 } } },
         ]);
@@ -243,7 +252,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.promptCountByType.set({ type }, result.count);
         }
 
-        // Tool Call metrics
+        // --- Tool Call Metrics ---
         const toolCallAgg = await ToolCall.aggregate([
             { $group: { _id: '$toolId', count: { $sum: 1 } } },
         ]);
@@ -253,85 +262,111 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.toolCallCountByTool.set({ toolId }, result.count);
         }
 
-        // Conversation metrics
+        // --- Conversation Metrics ---
         const convAgg = await Conversation.aggregate([
             { $project: { msgCount: { $size: '$messages' } } },
             { $group: { _id: null, avgMessages: { $avg: '$msgCount' } } },
         ]);
         advancedGauges.conversationMessageAvg.set(convAgg[0]?.avgMessages || 0);
 
-        // --- Transaction Token Metrics (Separate from cost) ---
-        const transactions = await Transaction.find({});
-        let tokensSum = 0;
-        for (const tx of transactions) {
-            const rawAmount: number = typeof tx.rawAmount === 'number' ? tx.rawAmount : 0;
-            tokensSum += Math.abs(rawAmount);
-        }
-        const txnCount: number = transactions.length;
-        const tokenAvg: number = txnCount > 0 ? tokensSum / txnCount : 0;
+        // --- Transaction Token Metrics (using aggregation) ---
+        const tokenAgg = await Transaction.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    tokensSum: { $sum: { $abs: '$rawAmount' } },
+                    txnCount: { $sum: 1 },
+                },
+            },
+        ]);
+        const tokensSum = tokenAgg[0]?.tokensSum || 0;
+        const txnCount = tokenAgg[0]?.txnCount || 0;
+        const tokenAvg = txnCount > 0 ? tokensSum / txnCount : 0;
         advancedGauges.transactionTokenSum.set(tokensSum);
         advancedGauges.transactionTokenAvg.set(tokenAvg);
 
         // --- Transaction Cost Metrics ---
-        const txnCostByType: Record<string, { total: number; count: number }> = {};
-        const modelCostMap: Record<string, { total: number; count: number }> = {};
-        let totalCostUSD = 0;
+        // Compute cost per token type and per model using a single aggregation with $facet.
+        const txnCostResults = await Transaction.aggregate([
+            {
+                $match: {
+                    model: { $nin: [null, 'unknown', 'UNKNOWN'] },
+                },
+            },
+            {
+                $project: {
+                    tokenType: { $ifNull: ['$tokenType', 'unknown'] },
+                    effectiveModel: '$model',
+                    rawAmount: 1,
+                    rate: { $ifNull: ['$rate', 1] },
+                    tokenValue: {
+                        $cond: {
+                            if: { $ifNull: ['$tokenValue', false] },
+                            then: '$tokenValue',
+                            else: { $multiply: [{ $abs: '$rawAmount' }, { $ifNull: ['$rate', 1] }] },
+                        },
+                    },
+                },
+            },
+            { $addFields: { costUSD: { $divide: [{ $abs: '$tokenValue' }, 1e6] } } },
+            {
+                $facet: {
+                    costByType: [
+                        {
+                            $group: {
+                                _id: '$tokenType',
+                                totalCost: { $sum: '$costUSD' },
+                                count: { $sum: 1 },
+                            },
+                        },
+                    ],
+                    costByModel: [
+                        {
+                            $group: {
+                                _id: '$effectiveModel',
+                                totalCost: { $sum: '$costUSD' },
+                                count: { $sum: 1 },
+                            },
+                        },
+                    ],
+                    totalCost: [
+                        {
+                            $group: {
+                                _id: null,
+                                totalCost: { $sum: '$costUSD' },
+                            },
+                        },
+                    ],
+                },
+            },
+        ]);
+        const costByType = txnCostResults[0]?.costByType || [];
+        const costByModel = txnCostResults[0]?.costByModel || [];
+        const totalCost = txnCostResults[0]?.totalCost[0]?.totalCost || 0;
 
-        for (const tx of transactions) {
-            // Ignore transactions with missing or unknown model.
-            if (!tx.model || (typeof tx.model === 'string' && tx.model.toLowerCase() === 'unknown')) {
-                continue;
-            }
-
-            const rawAmount: number = typeof tx.rawAmount === 'number' ? tx.rawAmount : 0;
-            const tokenType: string = tx.tokenType || 'unknown';
-            const effectiveModel: string = tx.model;
-
-            // Compute the token value and convert it to USD.
-            const tokenValue: number = typeof tx.tokenValue === 'number'
-                ? tx.tokenValue
-                : Math.abs(rawAmount) * (typeof tx.rate === 'number' ? tx.rate : 1);
-            const costUSD: number = Math.abs(tokenValue) / 1e6;
-            totalCostUSD += costUSD;
-
-            // Group by token type for cost calculations.
-            if (!txnCostByType[tokenType]) {
-                txnCostByType[tokenType] = { total: 0, count: 0 };
-            }
-            txnCostByType[tokenType].total += costUSD;
-            txnCostByType[tokenType].count += 1;
-
-            // Group cost per model.
-            if (!modelCostMap[effectiveModel]) {
-                modelCostMap[effectiveModel] = { total: 0, count: 0 };
-            }
-            modelCostMap[effectiveModel].total += costUSD;
-            modelCostMap[effectiveModel].count += 1;
-        }
-
-        // Update cost gauges by token type.
         advancedGauges.transactionCostSum.reset();
         advancedGauges.transactionCostAvg.reset();
-        for (const type in txnCostByType) {
-            const { total, count } = txnCostByType[type];
-            advancedGauges.transactionCostSum.set({ tokenType: type }, total);
-            advancedGauges.transactionCostAvg.set({ tokenType: type }, count > 0 ? total / count : 0);
+        for (const ct of costByType) {
+            advancedGauges.transactionCostSum.set({ tokenType: ct._id }, ct.totalCost);
+            advancedGauges.transactionCostAvg.set(
+                { tokenType: ct._id },
+                ct.count > 0 ? ct.totalCost / ct.count : 0,
+            );
         }
-        advancedGauges.transactionCostTotalUSD.set(totalCostUSD);
+        advancedGauges.transactionCostTotalUSD.set(totalCost);
 
         // Cost per user.
-        const userCount: number = await User.countDocuments({});
-        const costPerUser: number = userCount > 0 ? totalCostUSD / userCount : 0;
+        const userCount = await User.countDocuments({});
+        const costPerUser = userCount > 0 ? totalCost / userCount : 0;
         advancedGauges.transactionCostPerUser.set(costPerUser);
 
         // Cost per deployed model.
         advancedGauges.transactionCostPerModel.reset();
-        for (const model in modelCostMap) {
-            const { total } = modelCostMap[model];
-            advancedGauges.transactionCostPerModel.set({ model }, total);
+        for (const cm of costByModel) {
+            advancedGauges.transactionCostPerModel.set({ model: cm._id }, cm.totalCost);
         }
 
-        // Action metrics
+        // --- Action Metrics ---
         const actionAgg = await Action.aggregate([
             { $group: { _id: '$type', count: { $sum: 1 } } },
         ]);
@@ -341,54 +376,47 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.actionCountByType.set({ type }, result.count);
         }
 
-        // --- Updated Deployed Models / Agents / Assistants Metrics ---
-        // Group messages by their "model" field.
+        // --- Deployed Models / Agents / Assistants Metrics ---
         const deployedModelsAgg = await Message.aggregate([
             { $match: { model: { $ne: null } } },
             { $group: { _id: '$model', count: { $sum: 1 } } },
         ]);
-
-        // Get agent (or assistant) names from Agent collection based on their id.
-        const agentIds: string[] = deployedModelsAgg.map(result => result._id);
+        const agentIds = deployedModelsAgg.map((result) => result._id);
         const agents = await Agent.find({ id: { $in: agentIds } });
         const agentMap: Map<string, string> = new Map();
-        agents.forEach(agent => {
-            // Use agent.name if available; otherwise fallback to agent.id.
+        agents.forEach((agent) => {
             agentMap.set(agent.id, agent.name ? agent.name : agent.id);
         });
 
-        // Reset all three gauges.
         advancedGauges.deployedModelUsageCount.reset();
         advancedGauges.agentUsageCount.reset();
         advancedGauges.assistantUsageCount.reset();
 
         for (const result of deployedModelsAgg) {
             const id: string = result._id;
-            // If it's an agent, only update if we can map it to an agent.
-            if (id.startsWith("agent_")) {
+            if (id.startsWith('agent_')) {
                 if (agentMap.has(id)) {
                     const displayName = agentMap.get(id)!;
                     advancedGauges.agentUsageCount.set({ agent: displayName }, result.count);
                 }
-            } else if (id.startsWith("assistant_")) {
+            } else if (id.startsWith('assistant_')) {
                 if (agentMap.has(id)) {
                     const displayName = agentMap.get(id)!;
                     advancedGauges.assistantUsageCount.set({ assistant: displayName }, result.count);
                 }
             } else {
-                // Otherwise, count it as a deployed model.
                 advancedGauges.deployedModelUsageCount.set({ model: id }, result.count);
             }
         }
 
-        // Also count the total number of distinct deployed model names (only models, excluding agents/assistants).
+        // Count distinct deployed model names (excluding agents/assistants).
         const distinctModelsAgg = await Message.aggregate([
             { $match: { model: { $ne: null } } },
             { $group: { _id: '$model' } },
         ]);
-        const filteredDistinctModels = distinctModelsAgg.filter(doc => {
+        const filteredDistinctModels = distinctModelsAgg.filter((doc) => {
             const id: string = doc._id;
-            return !id.startsWith("agent_") && !id.startsWith("assistant_");
+            return !id.startsWith('agent_') && !id.startsWith('assistant_');
         });
         advancedGauges.deployedModelNamesCount.set(filteredDistinctModels.length);
 
