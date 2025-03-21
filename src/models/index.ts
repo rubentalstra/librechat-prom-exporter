@@ -5,7 +5,6 @@ export { default as Balance } from './Balance';
 export { default as Banner } from './Banner';
 export { default as Categories } from './Categories';
 export { default as ConversationTag } from './ConversationTag';
-export { conversationPreset } from './ConversationPreset';
 export { default as Conversation } from './Conversation';
 export { default as File } from './File';
 export { default as Key } from './Key';

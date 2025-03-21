@@ -1,13 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose from 'mongoose';
+import { balanceSchema, IBalance } from "@librechat/data-schemas";
 
-export interface IBalance extends Document {
-  user: mongoose.Types.ObjectId;
-  tokenCredits: number;
-}
-
-const BalanceSchema = new Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true, required: true },
-  tokenCredits: { type: Number, default: 0 },
-});
-
-export default mongoose.model<IBalance>('Balance', BalanceSchema);
+export default mongoose.model<IBalance>('Balance', balanceSchema);

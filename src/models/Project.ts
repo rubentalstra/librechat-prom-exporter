@@ -1,18 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose from 'mongoose';
+import { IMongoProject, projectSchema } from "@librechat/data-schemas";
 
-export interface IProject extends Document {
-  name: string;
-  promptGroupIds: mongoose.Types.ObjectId[];
-  agentIds: string[];
-}
-
-const ProjectSchema = new Schema(
-    {
-      name: { type: String, required: true, index: true },
-      promptGroupIds: { type: [Schema.Types.ObjectId], ref: 'PromptGroup', default: [] },
-      agentIds: { type: [String], ref: 'Agent', default: [] },
-    },
-    { timestamps: true },
-);
-
-export default mongoose.model<IProject>('Project', ProjectSchema);
+export default mongoose.model<IMongoProject>('Project', projectSchema);

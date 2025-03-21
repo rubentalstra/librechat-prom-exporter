@@ -1,13 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose from 'mongoose';
+import { categoriesSchema, ICategory } from "@librechat/data-schemas";
 
-export interface ICategory extends Document {
-  label: string;
-  value: string;
-}
-
-const CategoriesSchema = new Schema({
-  label: { type: String, required: true, unique: true },
-  value: { type: String, required: true, unique: true },
-});
-
-export default mongoose.model<ICategory>('categories', CategoriesSchema);
+export default mongoose.model<ICategory>('categories', categoriesSchema);
