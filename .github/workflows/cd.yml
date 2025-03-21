@@ -15,15 +15,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check for source changes
-        id: changes
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            src:
-              - 'src/**'
-            dockerfile:
-              - 'Dockerfile'
+#      - name: Check for source changes
+#        id: changes
+#        uses: dorny/paths-filter@v3
+#        with:
+#          filters: |
+#            src:
+#              - 'src/**'
+#            dockerfile:
+#              - 'Dockerfile'
 
       - name: Set up Docker Buildx
         if: steps.changes.outputs.src == 'true' || steps.changes.outputs.dockerfile == 'true'
@@ -48,11 +48,13 @@ jobs:
           tags: ghcr.io/${{ github.repository }}:latest
 
       - name: Build and push Docker image (version tag)
-        if: startsWith(github.ref, 'refs/tags/') && (steps.changes.outputs.src == 'true' || steps.changes.outputs.dockerfile == 'true')
+        if: startsWith(github.ref, 'refs/tags/v') && (steps.changes.outputs.src == 'true' || steps.changes.outputs.dockerfile == 'true')
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:latest
