@@ -350,7 +350,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.transactionCostSum.set({ tokenType: ct._id }, ct.totalCost);
             advancedGauges.transactionCostAvg.set(
                 { tokenType: ct._id },
-                ct.count > 0 ? ct.totalCost / ct.count : 0
+                ct.count > 0 ? ct.totalCost / ct.count : 0,
             );
         }
         advancedGauges.transactionCostTotalUSD.set(totalCost);
