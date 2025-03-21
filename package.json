@@ -1,6 +1,6 @@
 {
   "name": "librechat-prom-exporter",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Prometheus exporter for LibreChat metrics",
   "main": "dist/index.js",
   "scripts": {
@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/rubentalstra/librechat-prom-exporter#readme",
   "dependencies": {
+    "@librechat/data-schemas": "^0.0.4",
     "express": "^4.21.2",
     "mongoose": "^8.12.1",
     "prom-client": "^15.1.3"
