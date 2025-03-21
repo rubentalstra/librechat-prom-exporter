@@ -49,27 +49,72 @@ export const basicGauges = {
 
 export async function updateBasicMetrics(): Promise<void> {
     try {
-        basicGauges.users.set(await User.countDocuments({}));
-        basicGauges.actions.set(await Action.countDocuments({}));
-        basicGauges.agents.set(await Agent.countDocuments({}));
-        basicGauges.assistants.set(await Assistant.countDocuments({}));
-        basicGauges.balances.set(await Balance.countDocuments({}));
-        basicGauges.banners.set(await Banner.countDocuments({}));
-        basicGauges.conversationTags.set(await ConversationTag.countDocuments({}));
-        basicGauges.conversations.set(await Conversation.countDocuments({}));
-        basicGauges.files.set(await File.countDocuments({}));
-        basicGauges.keys.set(await Key.countDocuments({}));
-        basicGauges.messages.set(await Message.countDocuments({}));
-        basicGauges.pluginAuth.set(await PluginAuth.countDocuments({}));
-        basicGauges.presets.set(await Preset.countDocuments({}));
-        basicGauges.projects.set(await Project.countDocuments({}));
-        basicGauges.promptGroups.set(await PromptGroup.countDocuments({}));
-        basicGauges.prompts.set(await Prompt.countDocuments({}));
-        basicGauges.sessions.set(await Session.countDocuments({}));
-        basicGauges.sharedLinks.set(await SharedLink.countDocuments({}));
-        basicGauges.tokens.set(await Token.countDocuments({}));
-        basicGauges.toolCalls.set(await ToolCall.countDocuments({}));
-        basicGauges.transactions.set(await Transaction.countDocuments({}));
+        const [
+            userCount,
+            actionCount,
+            agentCount,
+            assistantCount,
+            balanceCount,
+            bannerCount,
+            conversationTagCount,
+            conversationCount,
+            fileCount,
+            keyCount,
+            messageCount,
+            pluginAuthCount,
+            presetCount,
+            projectCount,
+            promptGroupCount,
+            promptCount,
+            sessionCount,
+            sharedLinkCount,
+            tokenCount,
+            toolCallCount,
+            transactionCount,
+        ] = await Promise.all([
+            User.countDocuments({}),
+            Action.countDocuments({}),
+            Agent.countDocuments({}),
+            Assistant.countDocuments({}),
+            Balance.countDocuments({}),
+            Banner.countDocuments({}),
+            ConversationTag.countDocuments({}),
+            Conversation.countDocuments({}),
+            File.countDocuments({}),
+            Key.countDocuments({}),
+            Message.countDocuments({}),
+            PluginAuth.countDocuments({}),
+            Preset.countDocuments({}),
+            Project.countDocuments({}),
+            PromptGroup.countDocuments({}),
+            Prompt.countDocuments({}),
+            Session.countDocuments({}),
+            SharedLink.countDocuments({}),
+            Token.countDocuments({}),
+            ToolCall.countDocuments({}),
+            Transaction.countDocuments({}),
+        ]);
+        basicGauges.users.set(userCount);
+        basicGauges.actions.set(actionCount);
+        basicGauges.agents.set(agentCount);
+        basicGauges.assistants.set(assistantCount);
+        basicGauges.balances.set(balanceCount);
+        basicGauges.banners.set(bannerCount);
+        basicGauges.conversationTags.set(conversationTagCount);
+        basicGauges.conversations.set(conversationCount);
+        basicGauges.files.set(fileCount);
+        basicGauges.keys.set(keyCount);
+        basicGauges.messages.set(messageCount);
+        basicGauges.pluginAuth.set(pluginAuthCount);
+        basicGauges.presets.set(presetCount);
+        basicGauges.projects.set(projectCount);
+        basicGauges.promptGroups.set(promptGroupCount);
+        basicGauges.prompts.set(promptCount);
+        basicGauges.sessions.set(sessionCount);
+        basicGauges.sharedLinks.set(sharedLinkCount);
+        basicGauges.tokens.set(tokenCount);
+        basicGauges.toolCalls.set(toolCallCount);
+        basicGauges.transactions.set(transactionCount);
 
         console.log('Basic metrics updated.');
     } catch (error) {
