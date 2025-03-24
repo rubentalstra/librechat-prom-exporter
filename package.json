@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.7",
-    "@eslint/eslintrc": "^3.3.0",
+    "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.22.0",
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "@types/express": "^4.17.21",
