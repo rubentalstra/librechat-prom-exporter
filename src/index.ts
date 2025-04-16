@@ -7,7 +7,7 @@ import { advancedGauges } from './metrics/advancedMetrics';
 
 const app = express();
 const port = process.env.PORT || 3000;
-const refreshInterval = process.env.REFRESH_INTERVAL || 30000;
+const refreshInterval = parseInt(process.env.REFRESH_INTERVAL || '30000');
 
 // Create a Prometheus registry and collect default metrics.
 const register = new client.Registry();
