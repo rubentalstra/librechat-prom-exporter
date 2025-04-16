@@ -7,6 +7,7 @@ import { advancedGauges } from './metrics/advancedMetrics';
 
 const app = express();
 const port = process.env.PORT || 3000;
+const refreshInterval = process.env.REFRESH_INTERVAL || 30000;
 
 // Create a Prometheus registry and collect default metrics.
 const register = new client.Registry();
@@ -32,8 +33,8 @@ mongoose
         process.exit(1);
     });
 
-// Schedule metric updates every 30 seconds.
-setInterval(updateMetrics, 30000);
+// Schedule metric updates every 30 seconds or defined as variable.
+setInterval(updateMetrics, refreshInterval);
 updateMetrics(); // Initial update
 
 // Expose the /metrics endpoint for Prometheus.
