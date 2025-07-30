@@ -64,6 +64,26 @@ export const advancedGauges = {
         help: 'Number of active users within the last 5 minutes',
     }),
 
+    userCountByDomain: new client.Gauge({
+        name: 'librechat_user_count_by_domain',
+        help: 'Number of users grouped by email domain',
+        labelNames: ['domain'],
+    }),
+
+    // User in messages metrics
+    uniqueUserCount: new client.Gauge({
+        name: 'librechat_unique_users_count',
+        help: 'Number of unique users across all messages',
+    }),
+    uniqueUserCount7d: new client.Gauge({
+        name: 'librechat_unique_users_count_7d',
+        help: 'Unique users (last 7 days)',
+    }),
+    uniqueUserCount30d: new client.Gauge({
+        name: 'librechat_unique_users_count_30d',
+        help: 'Unique users (last 30 days)',
+    }),
+
     // Session metrics
     sessionAvgDuration: new client.Gauge({
         name: 'librechat_session_avg_duration',
@@ -218,6 +238,22 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.userProviderCount.set({ provider }, result.count);
         }
 
+        // --- User Count By Email Domain ---
+        const users = await User.find({ email: { $exists: true, $ne: null } }, { email: 1 });
+        const domainCountMap: Map<string, number> = new Map();
+
+        for (const user of users) {
+            const email: string = user.email;
+            const domain = email.split('@')[1] || 'unknown';
+            domainCountMap.set(domain, (domainCountMap.get(domain) || 0) + 1);
+        }
+
+        advancedGauges.userCountByDomain.reset();
+        for (const [domain, count] of domainCountMap.entries()) {
+            advancedGauges.userCountByDomain.set({ domain }, count);
+        }
+
+
         // --- Active Users in Last 5 Minutes ---
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         const activeUserAgg = await Message.aggregate([
@@ -228,6 +264,26 @@ export async function updateAdvancedMetrics(): Promise<void> {
         const activeUsers: number =
             activeUserAgg.length > 0 ? activeUserAgg[0].activeUsers : 0;
         advancedGauges.activeUserCount.set(activeUsers);
+
+        // --- Unique Users ---
+        const uniqueUsers = await Message.distinct('user');
+        advancedGauges.uniqueUserCount.set(uniqueUsers.length);
+
+        // --- Unique Users in Sliding Windows (7 and 30 days) ---
+        const date = new Date();
+        const sevenDaysAgo = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgo = new Date(date.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        const uniqueUsers7d = await Message.distinct('user', {
+            createdAt: { $gte: sevenDaysAgo },
+        });
+        const uniqueUsers30d = await Message.distinct('user', {
+            createdAt: { $gte: thirtyDaysAgo },
+        });
+
+        advancedGauges.uniqueUserCount7d.set(uniqueUsers7d.length);
+        advancedGauges.uniqueUserCount30d.set(uniqueUsers30d.length);
+
 
         // --- Session Metrics ---
         const sessionAgg = await Session.aggregate([
