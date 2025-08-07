@@ -244,12 +244,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         for (const user of users) {
             const email: string = user.email;
-            const domain = email.split('@')[1] || 'unknown';
-            domainCountMap.set(domain, (domainCountMap.get(domain) || 0) + 1);
+            const email_domain = email.split('@')[1] || 'unknown';
+            domainCountMap.set(email_domain, (domainCountMap.get(email_domain) || 0) + 1);
         }
 
         advancedGauges.userCountByDomain.reset();
-        for (const [domain, count] of domainCountMap.entries()) {
+        for (const [email_domain, count] of domainCountMap.entries()) {
             advancedGauges.userCountByDomain.set({ email_domain }, count);
         }
 
