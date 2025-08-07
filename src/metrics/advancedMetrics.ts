@@ -65,9 +65,9 @@ export const advancedGauges = {
     }),
 
     userCountByDomain: new client.Gauge({
-        name: 'librechat_user_count_by_domain',
+        name: 'librechat_user_count_by_email_domain',
         help: 'Number of users grouped by email domain',
-        labelNames: ['domain'],
+        labelNames: ['email_domain'],
     }),
 
     // User in messages metrics
@@ -250,7 +250,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         advancedGauges.userCountByDomain.reset();
         for (const [domain, count] of domainCountMap.entries()) {
-            advancedGauges.userCountByDomain.set({ domain }, count);
+            advancedGauges.userCountByDomain.set({ email_domain }, count);
         }
 
 
