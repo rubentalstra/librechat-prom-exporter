@@ -1,46 +1,32 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
+  "id": 1058,
   "links": [],
-  "refresh": "auto",
-  "schemaVersion": 40,
-  "style": "dark",
-  "tags": [
-    "LibreChat",
-    "Exporter"
-  ],
-  "templating": {
-    "list": [
-      {
-        "type": "datasource",
-        "name": "prometheusDS",
-        "label": "Data Source",
-        "query": "prometheus",
-        "hide": 0,
-        "current": {
-          "text": "Prometheus",
-          "value": "Prometheus"
-        }
-      }
-    ]
-  },
-  "time": {
-    "from": "now-24h",
-    "to": "now"
-  },
-  "timezone": "",
-  "title": "LibreChat Exporter Dashboard",
-  "uid": "librechat-exporter-dashboard",
-  "version": 7,
-  "weekStart": "",
   "panels": [
     {
       "description": "Intro and summary of this dashboard",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 4,
         "w": 24,
@@ -57,6 +43,7 @@
         "content": "# **Welcome to the LibreChat Exporter Dashboard**\n\nThis dashboard provides insights into key LibreChat metrics including users, conversations, tokens, transactions, and more. The queries are calculated over the currently selected time range (e.g. last 24 hours).",
         "mode": "markdown"
       },
+      "pluginVersion": "11.6.0",
       "title": "Dashboard Overview",
       "type": "text"
     },
@@ -115,6 +102,18 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -128,11 +127,7 @@
       "id": 118,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "mean"
-          ],
+          "calcs": ["lastNotNull", "max", "mean"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -143,6 +138,7 @@
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": "$prometheusDS",
@@ -155,12 +151,231 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uygYSy3Gk"
+      },
+      "description": "Users Last 7days - rolling window with unique users that logged in and has a message in the last 7days\nUsers Last 30days - rolling window with unique users that logged in and has a message in the last 30days\nUnique Users with messages - All time users with at least 1 message.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "id": 133,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "librechat_unique_users_count_7d",
+          "legendFormat": "Users Last 7D",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uygYSy3Gk"
+          },
+          "editorMode": "code",
+          "expr": "librechat_unique_users_count_30d",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "Users Last 30D",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "uygYSy3Gk"
+          },
+          "editorMode": "code",
+          "expr": "librechat_unique_users_count",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "Unique Users with messages",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Users Details",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "uygYSy3Gk"
+      },
+      "description": "This is a WIP. Label domain is getting replaced. Talk with CNPT",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "id": 134,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value"]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "sum by(email_domain) (librechat_user_count_by_email_domain)",
+          "hide": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "User Count by Domain",
+      "type": "piechart"
+    },
+    {
+      "datasource": "$prometheusDS",
+      "description": "Totals for messages, tool calls, plugin auth, and actions (all are now gauges).",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 21
+      },
+      "id": 103,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "layout": "horizontal",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "expr": "librechat_message_count",
+          "legendFormat": "Message Count",
+          "refId": "A"
+        },
+        {
+          "expr": "librechat_tool_call_count",
+          "legendFormat": "Tool Call Count",
+          "refId": "B"
+        },
+        {
+          "expr": "librechat_plugin_auth_count",
+          "legendFormat": "Plugin Auth Count",
+          "refId": "C"
+        },
+        {
+          "expr": "librechat_action_count",
+          "legendFormat": "Action Count",
+          "refId": "D"
+        }
+      ],
+      "title": "Messages & Tools (Total)",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 25
       },
       "id": 2,
       "panels": [],
@@ -173,6 +388,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -181,7 +408,7 @@
         "h": 4,
         "w": 8,
         "x": 0,
-        "y": 14
+        "y": 26
       },
       "id": 101,
       "options": {
@@ -192,9 +419,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -202,6 +427,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_user_count",
@@ -233,6 +459,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -241,7 +479,7 @@
         "h": 4,
         "w": 8,
         "x": 8,
-        "y": 14
+        "y": 26
       },
       "id": 102,
       "options": {
@@ -252,9 +490,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -262,6 +498,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_conversation_count",
@@ -294,10 +531,22 @@
     },
     {
       "datasource": "$prometheusDS",
-      "description": "Totals for messages, tool calls, plugin auth, and actions (all are now gauges).",
+      "description": "Totals for prompts, prompt groups, and presets.",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -306,9 +555,9 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 14
+        "y": 26
       },
-      "id": 103,
+      "id": 106,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -317,9 +566,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -327,29 +574,25 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
-          "expr": "librechat_message_count",
-          "legendFormat": "Message Count",
+          "expr": "librechat_prompt_count",
+          "legendFormat": "Prompt Count",
           "refId": "A"
         },
         {
-          "expr": "librechat_tool_call_count",
-          "legendFormat": "Tool Call Count",
+          "expr": "librechat_prompt_group_count",
+          "legendFormat": "Prompt Group Count",
           "refId": "B"
         },
         {
-          "expr": "librechat_plugin_auth_count",
-          "legendFormat": "Plugin Auth Count",
+          "expr": "librechat_preset_count",
+          "legendFormat": "Preset Count",
           "refId": "C"
-        },
-        {
-          "expr": "librechat_action_count",
-          "legendFormat": "Action Count",
-          "refId": "D"
         }
       ],
-      "title": "Messages & Tools (Total)",
+      "title": "Prompts & Presets",
       "type": "stat"
     },
     {
@@ -358,6 +601,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -366,7 +621,7 @@
         "h": 4,
         "w": 8,
         "x": 0,
-        "y": 18
+        "y": 30
       },
       "id": 104,
       "options": {
@@ -377,9 +632,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -387,6 +640,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_file_count",
@@ -413,10 +667,23 @@
       "type": "stat"
     },
     {
+      "datasource": "$prometheusDS",
       "description": "Totals for transactions and cost-related metrics (note: token count is now separated into its own section).",
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "currencyUSD"
         },
         "overrides": []
@@ -425,10 +692,9 @@
         "h": 4,
         "w": 8,
         "x": 8,
-        "y": 18
+        "y": 30
       },
       "id": 105,
-      "datasource": "$prometheusDS",
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -437,9 +703,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -447,6 +711,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_transaction_cost_total_usd",
@@ -463,67 +728,12 @@
       "type": "stat"
     },
     {
-      "description": "Totals for prompts, prompt groups, and presets.",
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [],
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 18
-      },
-      "id": 106,
-      "datasource": "$prometheusDS",
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "layout": "horizontal",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "targets": [
-        {
-          "expr": "librechat_prompt_count",
-          "legendFormat": "Prompt Count",
-          "refId": "A"
-        },
-        {
-          "expr": "librechat_prompt_group_count",
-          "legendFormat": "Prompt Group Count",
-          "refId": "B"
-        },
-        {
-          "expr": "librechat_preset_count",
-          "legendFormat": "Preset Count",
-          "refId": "C"
-        }
-      ],
-      "title": "Prompts & Presets",
-      "type": "stat"
-    },
-    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 34
       },
       "id": 3,
       "panels": [],
@@ -536,6 +746,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": [
@@ -557,7 +779,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 35
       },
       "id": 107,
       "options": {
@@ -568,9 +790,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -578,6 +798,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_message_token_sum",
@@ -614,6 +835,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "bytes"
         },
         "overrides": []
@@ -622,7 +855,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 35
       },
       "id": 108,
       "options": {
@@ -631,10 +864,9 @@
         "justifyMode": "auto",
         "layout": "horizontal",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -642,6 +874,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_file_total_bytes",
@@ -663,7 +896,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 43
       },
       "id": 4,
       "panels": [],
@@ -676,6 +909,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -684,7 +929,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 32
+        "y": 44
       },
       "id": 121,
       "options": {
@@ -694,9 +939,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -704,6 +947,7 @@
         "textMode": "value",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_deployed_model_names_count",
@@ -720,6 +964,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -728,7 +984,7 @@
         "h": 16,
         "w": 18,
         "x": 6,
-        "y": 32
+        "y": 44
       },
       "id": 122,
       "options": {
@@ -747,7 +1003,7 @@
         },
         "tiling": "treemapSquarify"
       },
-      "pluginVersion": "2.0.1",
+      "pluginVersion": "2.1.1",
       "targets": [
         {
           "expr": "librechat_model_usage_count",
@@ -775,10 +1031,10 @@
           "id": "organize",
           "options": {
             "renameByName": {
-              "lastNotNull": "Tile size",
-              "model": "Tile label",
               "agent": "Tile label",
-              "assistant": "Tile label"
+              "assistant": "Tile label",
+              "lastNotNull": "Tile size",
+              "model": "Tile label"
             }
           }
         }
@@ -808,7 +1064,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 40
+        "y": 52
       },
       "id": 109,
       "options": {
@@ -820,9 +1076,7 @@
         },
         "pieType": "pie",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -832,6 +1086,7 @@
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_agent_usage_count",
@@ -853,7 +1108,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 60
       },
       "id": 5,
       "panels": [],
@@ -883,7 +1138,7 @@
         "h": 8,
         "w": 9,
         "x": 0,
-        "y": 49
+        "y": 61
       },
       "id": 110,
       "options": {
@@ -895,9 +1150,7 @@
         },
         "pieType": "pie",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -907,6 +1160,7 @@
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "increase(librechat_user_provider_count[$__range])",
@@ -923,6 +1177,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "s"
         },
         "overrides": []
@@ -931,7 +1197,7 @@
         "h": 8,
         "w": 6,
         "x": 9,
-        "y": 49
+        "y": 61
       },
       "id": 111,
       "options": {
@@ -941,9 +1207,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -951,6 +1215,7 @@
         "textMode": "value",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_session_avg_duration",
@@ -967,6 +1232,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -975,7 +1252,7 @@
         "h": 8,
         "w": 9,
         "x": 15,
-        "y": 49
+        "y": 61
       },
       "id": 112,
       "options": {
@@ -985,9 +1262,7 @@
         "orientation": "auto",
         "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -995,6 +1270,7 @@
         "textMode": "value",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_prompt_group_generations_avg",
@@ -1011,7 +1287,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 69
       },
       "id": 6,
       "panels": [],
@@ -1048,6 +1324,18 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -1056,7 +1344,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 58
+        "y": 70
       },
       "id": 113,
       "options": {
@@ -1082,6 +1370,7 @@
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "increase(librechat_action_count_by_type[$__range])",
@@ -1122,6 +1411,18 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -1130,7 +1431,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 58
+        "y": 70
       },
       "id": 114,
       "options": {
@@ -1156,6 +1457,7 @@
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "increase(librechat_prompt_count_by_type[$__range])",
@@ -1196,6 +1498,18 @@
             }
           },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -1204,7 +1518,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 58
+        "y": 70
       },
       "id": 115,
       "options": {
@@ -1230,6 +1544,7 @@
         "xTickLabelRotation": 0,
         "xTickLabelSpacing": 0
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "increase(librechat_tool_call_count_by_tool[$__range])",
@@ -1246,7 +1561,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 66
+        "y": 78
       },
       "id": 7,
       "panels": [],
@@ -1261,7 +1576,52 @@
           "color": {
             "mode": "palette-classic"
           },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -1270,7 +1630,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 67
+        "y": 79
       },
       "id": 116,
       "options": {
@@ -1286,6 +1646,7 @@
           "sort": "none"
         }
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_conversation_message_avg",
@@ -1302,6 +1663,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "none"
         },
         "overrides": []
@@ -1310,7 +1683,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 67
+        "y": 79
       },
       "id": 117,
       "options": {
@@ -1327,9 +1700,7 @@
         "namePlacement": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1341,6 +1712,7 @@
         },
         "valueMode": "color"
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "increase(librechat_transaction_cost_sum[$__range])",
@@ -1357,12 +1729,37 @@
       "type": "bargauge"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 87
+      },
+      "id": 130,
+      "panels": [],
+      "title": "🔢 Token Metrics",
+      "type": "row"
+    },
+    {
       "datasource": "$prometheusDS",
       "description": "🔢 Transaction Token Metrics",
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
         },
         "overrides": []
       },
@@ -1370,7 +1767,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 71
+        "y": 88
       },
       "id": 123,
       "options": {
@@ -1379,10 +1776,9 @@
         "justifyMode": "auto",
         "layout": "horizontal",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1390,6 +1786,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_transaction_token_sum",
@@ -1405,8 +1802,20 @@
       "description": "🔢 Transaction Token Metrics",
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "mappings": []
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
         },
         "overrides": []
       },
@@ -1414,7 +1823,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 71
+        "y": 88
       },
       "id": 124,
       "options": {
@@ -1423,10 +1832,9 @@
         "justifyMode": "auto",
         "layout": "horizontal",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1434,6 +1842,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "librechat_transaction_token_avg",
@@ -1450,20 +1859,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
-      },
-      "id": 130,
-      "panels": [],
-      "title": "🔢 Token Metrics",
-      "type": "row"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 79
+        "y": 96
       },
       "id": 131,
       "panels": [],
@@ -1476,6 +1872,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "currencyUSD"
         },
         "overrides": []
@@ -1484,7 +1892,7 @@
         "h": 16,
         "w": 6,
         "x": 0,
-        "y": 85
+        "y": 97
       },
       "id": 132,
       "options": {
@@ -1493,10 +1901,9 @@
         "justifyMode": "auto",
         "layout": "horizontal",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1504,6 +1911,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
+      "pluginVersion": "11.6.0",
       "targets": [
         {
           "expr": "increase(librechat_transaction_cost_total_usd[$__range])",
@@ -1525,6 +1933,18 @@
       "fieldConfig": {
         "defaults": {
           "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "currencyUSD"
         },
         "overrides": []
@@ -1533,7 +1953,7 @@
         "h": 16,
         "w": 18,
         "x": 6,
-        "y": 85
+        "y": 97
       },
       "id": 125,
       "options": {
@@ -1552,7 +1972,7 @@
         },
         "tiling": "treemapSquarify"
       },
-      "pluginVersion": "2.0.1",
+      "pluginVersion": "2.1.1",
       "targets": [
         {
           "expr": "increase(librechat_transaction_cost_per_model[$__range])",
@@ -1578,5 +1998,34 @@
       ],
       "type": "marcusolsson-treemap-panel"
     }
-  ]
+  ],
+  "preload": false,
+  "refresh": "auto",
+  "schemaVersion": 41,
+  "tags": ["LibreChat", "Exporter"],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "Prometheus",
+          "value": "uygYSy3Gk"
+        },
+        "label": "Data Source",
+        "name": "prometheusDS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "LibreChat Exporter Dashboard",
+  "uid": "librechat-exporter-dashboard",
+  "version": 1
 }
