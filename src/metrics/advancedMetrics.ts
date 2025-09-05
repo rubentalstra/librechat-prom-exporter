@@ -253,7 +253,6 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.userCountByDomain.set({ email_domain }, count);
         }
 
-
         // --- Active Users in Last 5 Minutes ---
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         const activeUserAgg = await Message.aggregate([
@@ -283,7 +282,6 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         advancedGauges.uniqueUserCount7d.set(uniqueUsers7d.length);
         advancedGauges.uniqueUserCount30d.set(uniqueUsers30d.length);
-
 
         // --- Session Metrics ---
         const sessionAgg = await Session.aggregate([
