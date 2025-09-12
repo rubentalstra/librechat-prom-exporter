@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import client from 'prom-client';
+import 'dotenv/config';
 import { updateMetrics } from './metrics';
 import { basicGauges } from './metrics/basicMetrics';
 import { advancedGauges } from './metrics/advancedMetrics';
