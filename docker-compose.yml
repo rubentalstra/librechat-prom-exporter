@@ -1,5 +1,6 @@
 services:
   exporter:
+#    build: .
     image: ghcr.io/rubentalstra/librechat-prom-exporter:latest
     ports:
       - "${PORT}:${PORT}"

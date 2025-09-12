@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="Grafana 5.x Dashboard">
+          <value>
+            <SchemaInfo>
+              <option name="name" value="Grafana 5.x Dashboard" />
+              <option name="relativePathToSchema" value="https://www.schemastore.org/grafana-dashboard-5.x.json" />
+              <option name="applicationDefined" value="true" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="librechat-exporter-dashboard.json" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>
