@@ -63,6 +63,11 @@ export const advancedGauges = {
         name: 'librechat_active_users',
         help: 'Number of active users within the last 5 minutes',
     }),
+    activeUserCountByDomain: new client.Gauge({
+        name: 'librechat_active_users_by_email_domain',
+        help: 'Number of active users within the last 5 minutes grouped by email domain',
+        labelNames: ['email_domain'],
+    }),
 
     userCountByDomain: new client.Gauge({
         name: 'librechat_user_count_by_email_domain',
@@ -263,6 +268,34 @@ export async function updateAdvancedMetrics(): Promise<void> {
         const activeUsers: number =
             activeUserAgg.length > 0 ? activeUserAgg[0].activeUsers : 0;
         advancedGauges.activeUserCount.set(activeUsers);
+
+        // --- Active Users in Last 5 Minutes by Domain ---
+
+        const activeUsersByDomainAgg = await Message.aggregate([
+            { $match: { createdAt: { $gte: fiveMinutesAgo } } },
+            { $group: { _id: '$user' } },
+            { $addFields: { userId: { $toObjectId: '$_id' } } },
+            { $lookup: {
+                    from: 'users',
+                    localField: 'userId',
+                    foreignField: '_id',
+                    as: 'userDetails',
+                },
+            },
+            { $unwind: '$userDetails' },
+            { $project: { emailDomain: { $arrayElemAt: [{ $split: ['$userDetails.email', '@'] }, 1] } } },
+            { $group: { _id: '$emailDomain', activeUserCount: { $sum: 1 } } },
+            { $project: {
+                    _id: 0,
+                    domain: '$_id',
+                    count: '$activeUserCount',
+                },
+            }]);
+
+        advancedGauges.activeUserCountByDomain.reset();
+        for (const result of activeUsersByDomainAgg) {
+            advancedGauges.activeUserCountByDomain.set({ email_domain: result.domain }, result.count);
+        }
 
         // --- Unique Users ---
         const uniqueUsers = await Message.distinct('user');
