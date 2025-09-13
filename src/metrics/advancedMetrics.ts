@@ -272,7 +272,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         // --- Active Users in Last 5 Minutes by Domain ---
 
         const activeUsersByDomainAgg = await Message.aggregate([
-            { $match: { createdAt: { $gte: fiveMinutesAgo } } } ,
+            { $match: { createdAt: { $gte: fiveMinutesAgo } } },
             { $group: { _id: '$user' } },
             { $addFields: { userId: { $toObjectId: '$_id' } } },
             { $lookup: {
