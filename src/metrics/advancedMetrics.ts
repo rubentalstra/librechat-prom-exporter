@@ -284,7 +284,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             },
             { $unwind: '$userDetails' },
             { $project: { emailDomain: { $arrayElemAt: [{ $split: ['$userDetails.email', '@'] }, 1] } } },
-            { $group: { _id: '$emailDomain',activeUserCount: { $sum: 1 } } },
+            { $group: { _id: '$emailDomain', activeUserCount: { $sum: 1 } } },
             { $project: {
                     _id: 0,
                     domain: '$_id',
