@@ -88,6 +88,16 @@ export const advancedGauges = {
         name: 'librechat_unique_users_count_30d',
         help: 'Unique users (last 30 days)',
     }),
+    uniqueUserCount7dByDomain: new client.Gauge({
+        name: 'librechat_unique_users_count_7d_by_email_domain',
+        help: 'Unique users (last 7 days) grouped by email domain',
+        labelNames: ['email_domain'],
+    }),
+    uniqueUserCount30dByDomain: new client.Gauge({
+        name: 'librechat_unique_users_count_30d_by_email_domain',
+        help: 'Unique users (last 30 days) grouped by email domain',
+        labelNames: ['email_domain'],
+    }),
 
     // Session metrics
     sessionAvgDuration: new client.Gauge({
@@ -185,6 +195,35 @@ export const advancedGauges = {
     }),
 };
 
+/**
+ * Helper function to create aggregation pipeline for users by email domain
+ * @param timeFilter - Date filter for createdAt field
+ * @returns Array of aggregation pipeline stages
+ */
+function getUsersByDomainPipeline(timeFilter: Date) {
+    return [
+        { $match: { createdAt: { $gte: timeFilter } } },
+        { $group: { _id: '$user' } },
+        { $addFields: { userId: { $toObjectId: '$_id' } } },
+        { $lookup: {
+                from: 'users',
+                localField: 'userId',
+                foreignField: '_id',
+                as: 'userDetails',
+            },
+        },
+        { $unwind: '$userDetails' },
+        { $project: { emailDomain: { $arrayElemAt: [{ $split: ['$userDetails.email', '@'] }, 1] } } },
+        { $group: { _id: '$emailDomain', userCount: { $sum: 1 } } },
+        { $project: {
+                _id: 0,
+                domain: '$_id',
+                count: '$userCount',
+            },
+        },
+    ];
+}
+
 export async function updateAdvancedMetrics(): Promise<void> {
     try {
         // --- Message Metrics (run concurrently) ---
@@ -269,34 +308,6 @@ export async function updateAdvancedMetrics(): Promise<void> {
             activeUserAgg.length > 0 ? activeUserAgg[0].activeUsers : 0;
         advancedGauges.activeUserCount.set(activeUsers);
 
-        // --- Active Users in Last 5 Minutes by Domain ---
-
-        const activeUsersByDomainAgg = await Message.aggregate([
-            { $match: { createdAt: { $gte: fiveMinutesAgo } } },
-            { $group: { _id: '$user' } },
-            { $addFields: { userId: { $toObjectId: '$_id' } } },
-            { $lookup: {
-                    from: 'users',
-                    localField: 'userId',
-                    foreignField: '_id',
-                    as: 'userDetails',
-                },
-            },
-            { $unwind: '$userDetails' },
-            { $project: { emailDomain: { $arrayElemAt: [{ $split: ['$userDetails.email', '@'] }, 1] } } },
-            { $group: { _id: '$emailDomain', activeUserCount: { $sum: 1 } } },
-            { $project: {
-                    _id: 0,
-                    domain: '$_id',
-                    count: '$activeUserCount',
-                },
-            }]);
-
-        advancedGauges.activeUserCountByDomain.reset();
-        for (const result of activeUsersByDomainAgg) {
-            advancedGauges.activeUserCountByDomain.set({ email_domain: result.domain }, result.count);
-        }
-
         // --- Unique Users ---
         const uniqueUsers = await Message.distinct('user');
         advancedGauges.uniqueUserCount.set(uniqueUsers.length);
@@ -315,6 +326,42 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         advancedGauges.uniqueUserCount7d.set(uniqueUsers7d.length);
         advancedGauges.uniqueUserCount30d.set(uniqueUsers30d.length);
+
+        // --- Combined Active/Unique Users by Email Domain (5min, 7d, 30d) ---
+        const usersByDomainResults = await Message.aggregate([
+            {
+                $facet: {
+                    // Active users in last 5 minutes by domain
+                    active5min: getUsersByDomainPipeline(fiveMinutesAgo),
+                    // Unique users in last 7 days by domain
+                    unique7d: getUsersByDomainPipeline(sevenDaysAgo),
+                    // Unique users in last 30 days by domain
+                    unique30d: getUsersByDomainPipeline(thirtyDaysAgo),
+                },
+            },
+        ]);
+
+        // Process results and set metrics
+        const [activeUsersByDomainAgg, uniqueUsers7dByDomainAgg, uniqueUsers30dByDomainAgg] = [
+            usersByDomainResults[0]?.active5min || [],
+            usersByDomainResults[0]?.unique7d || [],
+            usersByDomainResults[0]?.unique30d || [],
+        ];
+
+        advancedGauges.activeUserCountByDomain.reset();
+        for (const result of activeUsersByDomainAgg) {
+            advancedGauges.activeUserCountByDomain.set({ email_domain: result.domain }, result.count);
+        }
+
+        advancedGauges.uniqueUserCount7dByDomain.reset();
+        for (const result of uniqueUsers7dByDomainAgg) {
+            advancedGauges.uniqueUserCount7dByDomain.set({ email_domain: result.domain }, result.count);
+        }
+
+        advancedGauges.uniqueUserCount30dByDomain.reset();
+        for (const result of uniqueUsers30dByDomainAgg) {
+            advancedGauges.uniqueUserCount30dByDomain.set({ email_domain: result.domain }, result.count);
+        }
 
         // --- Session Metrics ---
         const sessionAgg = await Session.aggregate([
