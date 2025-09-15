@@ -195,6 +195,35 @@ export const advancedGauges = {
     }),
 };
 
+/**
+ * Helper function to create aggregation pipeline for users by email domain
+ * @param timeFilter - Date filter for createdAt field
+ * @returns Array of aggregation pipeline stages
+ */
+function getUsersByDomainPipeline(timeFilter: Date) {
+    return [
+        { $match: { createdAt: { $gte: timeFilter } } },
+        { $group: { _id: '$user' } },
+        { $addFields: { userId: { $toObjectId: '$_id' } } },
+        { $lookup: {
+                from: 'users',
+                localField: 'userId',
+                foreignField: '_id',
+                as: 'userDetails',
+            },
+        },
+        { $unwind: '$userDetails' },
+        { $project: { emailDomain: { $arrayElemAt: [{ $split: ['$userDetails.email', '@'] }, 1] } } },
+        { $group: { _id: '$emailDomain', userCount: { $sum: 1 } } },
+        { $project: {
+                _id: 0,
+                domain: '$_id',
+                count: '$userCount',
+            },
+        },
+    ];
+}
+
 export async function updateAdvancedMetrics(): Promise<void> {
     try {
         // --- Message Metrics (run concurrently) ---
@@ -303,71 +332,11 @@ export async function updateAdvancedMetrics(): Promise<void> {
             {
                 $facet: {
                     // Active users in last 5 minutes by domain
-                    active5min: [
-                        { $match: { createdAt: { $gte: fiveMinutesAgo } } },
-                        { $group: { _id: '$user' } },
-                        { $addFields: { userId: { $toObjectId: '$_id' } } },
-                        { $lookup: {
-                                from: 'users',
-                                localField: 'userId',
-                                foreignField: '_id',
-                                as: 'userDetails',
-                            },
-                        },
-                        { $unwind: '$userDetails' },
-                        { $project: { emailDomain: { $arrayElemAt: [{ $split: ['$userDetails.email', '@'] }, 1] } } },
-                        { $group: { _id: '$emailDomain', userCount: { $sum: 1 } } },
-                        { $project: {
-                                _id: 0,
-                                domain: '$_id',
-                                count: '$userCount',
-                            },
-                        },
-                    ],
+                    active5min: getUsersByDomainPipeline(fiveMinutesAgo),
                     // Unique users in last 7 days by domain
-                    unique7d: [
-                        { $match: { createdAt: { $gte: sevenDaysAgo } } },
-                        { $group: { _id: '$user' } },
-                        { $addFields: { userId: { $toObjectId: '$_id' } } },
-                        { $lookup: {
-                                from: 'users',
-                                localField: 'userId',
-                                foreignField: '_id',
-                                as: 'userDetails',
-                            },
-                        },
-                        { $unwind: '$userDetails' },
-                        { $project: { emailDomain: { $arrayElemAt: [{ $split: ['$userDetails.email', '@'] }, 1] } } },
-                        { $group: { _id: '$emailDomain', userCount: { $sum: 1 } } },
-                        { $project: {
-                                _id: 0,
-                                domain: '$_id',
-                                count: '$userCount',
-                            },
-                        },
-                    ],
+                    unique7d: getUsersByDomainPipeline(sevenDaysAgo),
                     // Unique users in last 30 days by domain
-                    unique30d: [
-                        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
-                        { $group: { _id: '$user' } },
-                        { $addFields: { userId: { $toObjectId: '$_id' } } },
-                        { $lookup: {
-                                from: 'users',
-                                localField: 'userId',
-                                foreignField: '_id',
-                                as: 'userDetails',
-                            },
-                        },
-                        { $unwind: '$userDetails' },
-                        { $project: { emailDomain: { $arrayElemAt: [{ $split: ['$userDetails.email', '@'] }, 1] } } },
-                        { $group: { _id: '$emailDomain', userCount: { $sum: 1 } } },
-                        { $project: {
-                                _id: 0,
-                                domain: '$_id',
-                                count: '$userCount',
-                            },
-                        },
-                    ],
+                    unique30d: getUsersByDomainPipeline(thirtyDaysAgo),
                 },
             },
         ]);
