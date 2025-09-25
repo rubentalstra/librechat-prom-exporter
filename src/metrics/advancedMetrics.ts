@@ -41,12 +41,12 @@ export const advancedGauges = {
     messageFeedbackThumbsUpCount: new client.Gauge({
         name: 'librechat_message_feedback_thumbs_up_count',
         help: 'Count of messages with thumbs up feedback',
-        labelNames: ['tag'],
+        labelNames: ['tag', 'model'],
     }),
     messageFeedbackThumbsDownCount: new client.Gauge({
         name: 'librechat_message_feedback_thumbs_down_count',
         help: 'Count of messages with thumbs down feedback',
-        labelNames: ['tag'],
+        labelNames: ['tag', 'model'],
     }),
 
 
@@ -260,7 +260,10 @@ export async function updateAdvancedMetrics(): Promise<void> {
                 { $match: { 'feedback.rating': 'thumbsUp' } },
                 { 
                     $group: { 
-                        _id: { $ifNull: ['$feedback.tag', 'no_tag'] }, 
+                        _id: { 
+                            tag: { $ifNull: ['$feedback.tag', 'no_tag'] },
+                            model: { $ifNull: ['$model', 'unknown'] }
+                        }, 
                         count: { $sum: 1 } 
                     } 
                 }
@@ -269,7 +272,10 @@ export async function updateAdvancedMetrics(): Promise<void> {
                 { $match: { 'feedback.rating': 'thumbsDown' } },
                 { 
                     $group: { 
-                        _id: { $ifNull: ['$feedback.tag', 'no_tag'] }, 
+                        _id: { 
+                            tag: { $ifNull: ['$feedback.tag', 'no_tag'] },
+                            model: { $ifNull: ['$model', 'unknown'] }
+                        }, 
                         count: { $sum: 1 } 
                     } 
                 }
@@ -284,17 +290,19 @@ export async function updateAdvancedMetrics(): Promise<void> {
             totalMsgCount > 0 ? (pluginUsageCount / totalMsgCount) * 100 : 0;
         advancedGauges.messagePluginUsagePercent.set(pluginUsagePercent);
 
-        // Set feedback metrics by tag
+        // Set feedback metrics by tag and model
         advancedGauges.messageFeedbackThumbsUpCount.reset();
         for (const result of thumbsUpByTagAgg) {
-            const tag: string = result._id || 'no_tag';
-            advancedGauges.messageFeedbackThumbsUpCount.set({ tag }, result.count);
+            const tag: string = result._id?.tag || 'no_tag';
+            const model: string = result._id?.model || 'unknown';
+            advancedGauges.messageFeedbackThumbsUpCount.set({ tag, model }, result.count);
         }
 
         advancedGauges.messageFeedbackThumbsDownCount.reset();
         for (const result of thumbsDownByTagAgg) {
-            const tag: string = result._id || 'no_tag';
-            advancedGauges.messageFeedbackThumbsDownCount.set({ tag }, result.count);
+            const tag: string = result._id?.tag || 'no_tag';
+            const model: string = result._id?.model || 'unknown';
+            advancedGauges.messageFeedbackThumbsDownCount.set({ tag, model }, result.count);
         }
 
         // --- Banner Metrics ---
