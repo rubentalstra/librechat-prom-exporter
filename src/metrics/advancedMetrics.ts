@@ -49,7 +49,6 @@ export const advancedGauges = {
         labelNames: ['tag', 'model'],
     }),
 
-
     // Banner metrics
     activeBannerCount: new client.Gauge({
         name: 'librechat_active_banner_count',
@@ -258,27 +257,27 @@ export async function updateAdvancedMetrics(): Promise<void> {
             Message.countDocuments({ plugin: { $exists: true, $ne: null } }),
             Message.aggregate([
                 { $match: { 'feedback.rating': 'thumbsUp' } },
-                { 
-                    $group: { 
-                        _id: { 
+                {
+                    $group: {
+                        _id: {
                             tag: { $ifNull: ['$feedback.tag', 'no_tag'] },
-                            model: { $ifNull: ['$model', 'unknown'] }
-                        }, 
-                        count: { $sum: 1 } 
-                    } 
-                }
+                            model: { $ifNull: ['$model', 'unknown'] },
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
             ]),
             Message.aggregate([
                 { $match: { 'feedback.rating': 'thumbsDown' } },
-                { 
-                    $group: { 
-                        _id: { 
+                {
+                    $group: {
+                        _id: {
                             tag: { $ifNull: ['$feedback.tag', 'no_tag'] },
-                            model: { $ifNull: ['$model', 'unknown'] }
-                        }, 
-                        count: { $sum: 1 } 
-                    } 
-                }
+                            model: { $ifNull: ['$model', 'unknown'] },
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
             ]),
         ]);
 
