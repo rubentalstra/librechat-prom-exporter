@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/rubentalstra/librechat-prom-exporter#readme",
   "dependencies": {
-    "@librechat/data-schemas": "^0.0.7",
+    "@librechat/data-schemas": "^0.0.23",
     "dotenv": "^17.2.2",
     "express": "^4.21.2",
     "librechat-data-provider": "^0.8.6",
