@@ -25,7 +25,7 @@
     "@librechat/data-schemas": "^0.0.7",
     "dotenv": "^17.2.2",
     "express": "^4.21.2",
-    "librechat-data-provider": "^0.8.6",
+    "librechat-data-provider": "^0.8.20",
     "mongoose": "^8.18.1",
     "prom-client": "^15.1.3"
   },
