@@ -37,6 +37,18 @@ export const advancedGauges = {
         help: 'Percentage of messages that use a plugin',
     }),
 
+    // Feedback metrics
+    messageFeedbackThumbsUpCount: new client.Gauge({
+        name: 'librechat_message_feedback_thumbs_up_count',
+        help: 'Count of messages with thumbs up feedback',
+        labelNames: ['tag', 'model'],
+    }),
+    messageFeedbackThumbsDownCount: new client.Gauge({
+        name: 'librechat_message_feedback_thumbs_down_count',
+        help: 'Count of messages with thumbs down feedback',
+        labelNames: ['tag', 'model'],
+    }),
+
     // Banner metrics
     activeBannerCount: new client.Gauge({
         name: 'librechat_active_banner_count',
@@ -234,6 +246,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
             msgWithAttachCount,
             totalMsgCount,
             pluginUsageCount,
+            thumbsUpByTagAgg,
+            thumbsDownByTagAgg,
         ] = await Promise.all([
             Message.aggregate([{ $group: { _id: null, total: { $sum: '$tokenCount' } } }]),
             Message.aggregate([{ $group: { _id: null, avg: { $avg: '$tokenCount' } } }]),
@@ -241,6 +255,30 @@ export async function updateAdvancedMetrics(): Promise<void> {
             Message.countDocuments({ attachments: { $exists: true, $ne: [] } }),
             Message.countDocuments({}),
             Message.countDocuments({ plugin: { $exists: true, $ne: null } }),
+            Message.aggregate([
+                { $match: { 'feedback.rating': 'thumbsUp' } },
+                {
+                    $group: {
+                        _id: {
+                            tag: { $ifNull: ['$feedback.tag', 'no_tag'] },
+                            model: { $ifNull: ['$model', 'unknown'] },
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+            Message.aggregate([
+                { $match: { 'feedback.rating': 'thumbsDown' } },
+                {
+                    $group: {
+                        _id: {
+                            tag: { $ifNull: ['$feedback.tag', 'no_tag'] },
+                            model: { $ifNull: ['$model', 'unknown'] },
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
         ]);
 
         advancedGauges.messageTokenSum.set(tokenSumAgg[0]?.total || 0);
@@ -250,6 +288,21 @@ export async function updateAdvancedMetrics(): Promise<void> {
         const pluginUsagePercent =
             totalMsgCount > 0 ? (pluginUsageCount / totalMsgCount) * 100 : 0;
         advancedGauges.messagePluginUsagePercent.set(pluginUsagePercent);
+
+        // Set feedback metrics by tag and model
+        advancedGauges.messageFeedbackThumbsUpCount.reset();
+        for (const result of thumbsUpByTagAgg) {
+            const tag: string = result._id?.tag || 'no_tag';
+            const model: string = result._id?.model || 'unknown';
+            advancedGauges.messageFeedbackThumbsUpCount.set({ tag, model }, result.count);
+        }
+
+        advancedGauges.messageFeedbackThumbsDownCount.reset();
+        for (const result of thumbsDownByTagAgg) {
+            const tag: string = result._id?.tag || 'no_tag';
+            const model: string = result._id?.model || 'unknown';
+            advancedGauges.messageFeedbackThumbsDownCount.set({ tag, model }, result.count);
+        }
 
         // --- Banner Metrics ---
         const now = new Date();
