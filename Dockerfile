@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM node:23-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY src ./src
 RUN npm run build
 
 # Stage 2: Install production dependencies only
-FROM node:23-alpine AS deps
+FROM node:25-alpine AS deps
 
 WORKDIR /app
 
