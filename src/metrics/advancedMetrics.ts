@@ -568,10 +568,10 @@ export async function updateAdvancedMetrics(): Promise<void> {
             { $match: { model: { $ne: null } } },
             { $group: { _id: '$model', count: { $sum: 1 } } },
         ]);
-        const agentIds = deployedModelsAgg.map((result) => result._id);
+        const agentIds = deployedModelsAgg.map((result: { _id: string; count: number }) => result._id);
         const agents = await Agent.find({ id: { $in: agentIds } });
         const agentMap: Map<string, string> = new Map();
-        agents.forEach((agent) => {
+        agents.forEach((agent: { id: string; name?: string }) => {
             agentMap.set(agent.id, agent.name ? agent.name : agent.id);
         });
 
@@ -601,7 +601,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             { $match: { model: { $ne: null } } },
             { $group: { _id: '$model' } },
         ]);
-        const filteredDistinctModels = distinctModelsAgg.filter((doc) => {
+        const filteredDistinctModels = distinctModelsAgg.filter((doc: { _id: string }) => {
             const id: string = doc._id;
             return !id.startsWith('agent_') && !id.startsWith('assistant_');
         });
