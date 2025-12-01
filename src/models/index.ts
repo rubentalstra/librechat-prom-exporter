@@ -10,7 +10,6 @@ export const Agent = models.Agent;
 export const Assistant = models.Assistant;
 export const Balance = models.Balance;
 export const Banner = models.Banner;
-export const Categories = models.AgentCategory; // Maps to AgentCategory in new schema
 export const ConversationTag = models.ConversationTag;
 export const Conversation = models.Conversation;
 export const File = models.File;
@@ -20,7 +19,9 @@ export const PluginAuth = models.PluginAuth;
 export const Preset = models.Preset;
 export const Project = models.Project;
 export const PromptGroup = models.PromptGroup;
-export const Prompt = models.Role; // Note: The old Prompt model used roleSchema, so this maps to Role
+// Note: The original Prompt.ts file incorrectly used roleSchema to create a 'Role' model,
+// so we maintain the export name 'Prompt' for backward compatibility in metrics code
+export const Prompt = models.Role;
 export const Session = models.Session;
 export const SharedLink = models.SharedLink;
 export const Token = models.Token;
