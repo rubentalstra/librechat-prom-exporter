@@ -65,7 +65,7 @@ jobs:
           npx ts-prune > tsprune_results.txt || true
 
       - name: Upload Code Quality Artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: code-quality-results
           path: |
