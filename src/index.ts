@@ -40,8 +40,13 @@ updateMetrics(); // Initial update
 
 // Expose the /metrics endpoint for Prometheus.
 app.get('/metrics', async (req: Request, res: Response) => {
-    res.set('Content-Type', register.contentType);
-    res.send(await register.metrics());
+    try {
+        res.set('Content-Type', register.contentType);
+        res.send(await register.metrics());
+    } catch (error) {
+        console.error('Error generating metrics:', error);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 // Health check endpoint.
