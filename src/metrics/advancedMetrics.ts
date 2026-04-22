@@ -48,6 +48,34 @@ export const advancedGauges = {
         help: 'Count of messages with thumbs down feedback',
         labelNames: ['tag', 'model'],
     }),
+    messageFeedbackThumbsUpTotal: new client.Gauge({
+        name: 'librechat_message_feedback_thumbs_up_total',
+        help: 'Total count of messages with thumbs up feedback',
+    }),
+    messageFeedbackThumbsDownTotal: new client.Gauge({
+        name: 'librechat_message_feedback_thumbs_down_total',
+        help: 'Total count of messages with thumbs down feedback',
+    }),
+    feedbackThumbsUpPercentByModel30d: new client.Gauge({
+        name: 'librechat_feedback_thumbs_up_percent_by_model_30d',
+        help: 'Percentage of messages with thumbs up feedback per model (last 30 days)',
+        labelNames: ['model'],
+    }),
+    feedbackThumbsDownPercentByModel30d: new client.Gauge({
+        name: 'librechat_feedback_thumbs_down_percent_by_model_30d',
+        help: 'Percentage of messages with thumbs down feedback per model (last 30 days)',
+        labelNames: ['model'],
+    }),
+    feedbackThumbsUpPercentByAgent30d: new client.Gauge({
+        name: 'librechat_feedback_thumbs_up_percent_by_agent_30d',
+        help: 'Percentage of messages with thumbs up feedback per agent (last 30 days)',
+        labelNames: ['agent'],
+    }),
+    feedbackThumbsDownPercentByAgent30d: new client.Gauge({
+        name: 'librechat_feedback_thumbs_down_percent_by_agent_30d',
+        help: 'Percentage of messages with thumbs down feedback per agent (last 30 days)',
+        labelNames: ['agent'],
+    }),
 
     // Banner metrics
     activeBannerCount: new client.Gauge({
@@ -214,6 +242,45 @@ export const advancedGauges = {
         name: 'librechat_deployed_model_names_count',
         help: 'Total number of distinct deployed model names found in messages',
     }),
+
+    // Internal user metrics
+    internalAdoptionRate30d: new client.Gauge({
+        name: 'librechat_internal_adoption_rate_30d',
+        help: 'Percentage of internal (NOS group) unique users vs total unique users in the last 30 days',
+    }),
+
+    // Adoption rate metrics
+    adoptionRate1d: new client.Gauge({
+        name: 'librechat_adoption_rate_1d',
+        help: 'Percentage of active users (last 1 day) vs total registered users',
+    }),
+    adoptionRate7d: new client.Gauge({
+        name: 'librechat_adoption_rate_7d',
+        help: 'Percentage of active users (last 7 days) vs total registered users',
+    }),
+    adoptionRate30d: new client.Gauge({
+        name: 'librechat_adoption_rate_30d',
+        help: 'Percentage of active users (last 30 days) vs total registered users',
+    }),
+
+    // MCP utilization metrics (30 days)
+    mcpToolCallCount30d: new client.Gauge({
+        name: 'librechat_mcp_tool_call_count_30d',
+        help: 'Total MCP tool calls in the last 30 days',
+    }),
+    mcpToolCallCountByTool30d: new client.Gauge({
+        name: 'librechat_mcp_tool_call_count_by_tool_30d',
+        help: 'MCP tool calls in the last 30 days by toolId',
+        labelNames: ['toolId'],
+    }),
+    mcpUniqueUserCount30d: new client.Gauge({
+        name: 'librechat_mcp_unique_users_30d',
+        help: 'Unique users using MCP tools in the last 30 days',
+    }),
+    mcpUtilizationPercent30d: new client.Gauge({
+        name: 'librechat_mcp_utilization_percent_30d',
+        help: 'Percentage of tool calls that are MCP in the last 30 days',
+    }),
 };
 
 /**
@@ -304,6 +371,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
             totalMsgCount > 0 ? (pluginUsageCount / totalMsgCount) * 100 : 0;
         advancedGauges.messagePluginUsagePercent.set(pluginUsagePercent);
 
+        // Set feedback totals
+        const thumbsUpTotal = thumbsUpByTagAgg.reduce((sum: number, r: { count: number }) => sum + r.count, 0);
+        const thumbsDownTotal = thumbsDownByTagAgg.reduce((sum: number, r: { count: number }) => sum + r.count, 0);
+        advancedGauges.messageFeedbackThumbsUpTotal.set(thumbsUpTotal);
+        advancedGauges.messageFeedbackThumbsDownTotal.set(thumbsDownTotal);
+
         // Set feedback metrics by tag and model
         advancedGauges.messageFeedbackThumbsUpCount.reset();
         for (const result of thumbsUpByTagAgg) {
@@ -375,7 +448,10 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.activeUserCount.set(activeUsers);
 
         // --- Unique Users ---
-        const uniqueUsers = await Message.distinct('user');
+        const [uniqueUsers, totalUserCount] = await Promise.all([
+            Message.distinct('user'),
+            User.countDocuments({}),
+        ]);
         advancedGauges.uniqueUserCount.set(uniqueUsers.length);
 
         // --- Unique Users in Sliding Windows (1, 7 and 30 days) ---
@@ -392,6 +468,17 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.uniqueUserCount1d.set(uniqueUsers1d.length);
         advancedGauges.uniqueUserCount7d.set(uniqueUsers7d.length);
         advancedGauges.uniqueUserCount30d.set(uniqueUsers30d.length);
+
+        // --- Adoption Rates (active users / total users) ---
+        advancedGauges.adoptionRate1d.set(
+            totalUserCount > 0 ? (uniqueUsers1d.length / totalUserCount) * 100 : 0,
+        );
+        advancedGauges.adoptionRate7d.set(
+            totalUserCount > 0 ? (uniqueUsers7d.length / totalUserCount) * 100 : 0,
+        );
+        advancedGauges.adoptionRate30d.set(
+            totalUserCount > 0 ? (uniqueUsers30d.length / totalUserCount) * 100 : 0,
+        );
 
         // --- Combined Active/Unique Users by Email Domain (5min, 1d, 7d, 30d) ---
         const usersByDomainResults = await Message.aggregate([
@@ -564,8 +651,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.transactionCostTotalUSD.set(totalCost);
 
         // Cost per user.
-        const userCount = await User.countDocuments({});
-        const costPerUser = userCount > 0 ? totalCost / userCount : 0;
+        const costPerUser = totalUserCount > 0 ? totalCost / totalUserCount : 0;
         advancedGauges.transactionCostPerUser.set(costPerUser);
 
         // Cost per deployed model.
@@ -617,6 +703,47 @@ export async function updateAdvancedMetrics(): Promise<void> {
             }
         }
 
+        // --- Feedback Percentage by Model / Agent (30 days) ---
+        // Only assistant-generated messages (isCreatedByUser: false) are eligible for feedback.
+        const feedbackByModel30dAgg = await Message.aggregate([
+            { $match: { createdAt: { $gte: thirtyDaysAgo }, model: { $ne: null }, isCreatedByUser: false } },
+            {
+                $group: {
+                    _id: '$model',
+                    total: { $sum: 1 },
+                    thumbsUp: {
+                        $sum: { $cond: [{ $eq: ['$feedback.rating', 'thumbsUp'] }, 1, 0] },
+                    },
+                    thumbsDown: {
+                        $sum: { $cond: [{ $eq: ['$feedback.rating', 'thumbsDown'] }, 1, 0] },
+                    },
+                },
+            },
+        ]);
+
+        advancedGauges.feedbackThumbsUpPercentByModel30d.reset();
+        advancedGauges.feedbackThumbsDownPercentByModel30d.reset();
+        advancedGauges.feedbackThumbsUpPercentByAgent30d.reset();
+        advancedGauges.feedbackThumbsDownPercentByAgent30d.reset();
+
+        for (const result of feedbackByModel30dAgg) {
+            const id: string = result._id;
+            const total: number = result.total;
+            if (total === 0) continue;
+
+            const upPct = (result.thumbsUp / total) * 100;
+            const downPct = (result.thumbsDown / total) * 100;
+
+            if (id.startsWith('agent_')) {
+                const displayName = agentMap.get(id) || id;
+                advancedGauges.feedbackThumbsUpPercentByAgent30d.set({ agent: displayName }, upPct);
+                advancedGauges.feedbackThumbsDownPercentByAgent30d.set({ agent: displayName }, downPct);
+            } else if (!id.startsWith('assistant_')) {
+                advancedGauges.feedbackThumbsUpPercentByModel30d.set({ model: id }, upPct);
+                advancedGauges.feedbackThumbsDownPercentByModel30d.set({ model: id }, downPct);
+            }
+        }
+
         // Count distinct deployed model names (excluding agents/assistants).
         const distinctModelsAgg = await Message.aggregate([
             { $match: { model: { $ne: null } } },
@@ -627,6 +754,70 @@ export async function updateAdvancedMetrics(): Promise<void> {
             return !id.startsWith('agent_') && !id.startsWith('assistant_');
         });
         advancedGauges.deployedModelNamesCount.set(filteredDistinctModels.length);
+
+        // --- Internal Adoption Rate (30 days) ---
+        const internalDomains = new Set(['nos.pt', 'nos-acores.pt', 'nosmadeira.pt', 'tentwentyone.io', 'lojas.nos.pt', 'corporativo.pt']);
+        const internalUniqueUsers30d = uniqueUsers30dByDomainAgg
+            .filter((r: { domain: string; count: number }) => internalDomains.has(r.domain))
+            .reduce((sum: number, r: { count: number }) => sum + r.count, 0);
+        const totalUniqueUsers30d = uniqueUsers30d.length;
+        advancedGauges.internalAdoptionRate30d.set(
+            totalUniqueUsers30d > 0 ? (internalUniqueUsers30d / totalUniqueUsers30d) * 100 : 0,
+        );
+
+        // --- MCP Utilization Metrics (30 days) ---
+        // MCP tool calls are NOT stored in the toolcalls collection.
+        // They are embedded as content parts (type: 'tool_call') within messages.
+        const toolCallContentAgg = await Message.aggregate([
+            { $match: { createdAt: { $gte: thirtyDaysAgo }, 'content.type': 'tool_call' } },
+            { $unwind: '$content' },
+            { $match: { 'content.type': 'tool_call' } },
+            {
+                $addFields: {
+                    toolName: {
+                        $ifNull: [
+                            '$content.tool_call.name',
+                            { $ifNull: ['$content.tool_call.function.name', 'unknown'] },
+                        ],
+                    },
+                },
+            },
+            {
+                $facet: {
+                    totalToolCalls: [{ $count: 'count' }],
+                    mcpTotal: [
+                        { $match: { toolName: { $regex: '_mcp_' } } },
+                        { $count: 'count' },
+                    ],
+                    mcpByTool: [
+                        { $match: { toolName: { $regex: '_mcp_' } } },
+                        { $group: { _id: '$toolName', count: { $sum: 1 } } },
+                    ],
+                    mcpUniqueUsers: [
+                        { $match: { toolName: { $regex: '_mcp_' } } },
+                        { $group: { _id: '$user' } },
+                        { $count: 'count' },
+                    ],
+                },
+            },
+        ]);
+
+        const totalToolCalls30d = toolCallContentAgg[0]?.totalToolCalls[0]?.count || 0;
+        const mcpTotal = toolCallContentAgg[0]?.mcpTotal[0]?.count || 0;
+        const mcpByTool = toolCallContentAgg[0]?.mcpByTool || [];
+        const mcpUsers = toolCallContentAgg[0]?.mcpUniqueUsers[0]?.count || 0;
+
+        advancedGauges.mcpToolCallCount30d.set(mcpTotal);
+
+        advancedGauges.mcpToolCallCountByTool30d.reset();
+        for (const result of mcpByTool) {
+            advancedGauges.mcpToolCallCountByTool30d.set({ toolId: result._id }, result.count);
+        }
+
+        advancedGauges.mcpUniqueUserCount30d.set(mcpUsers);
+        advancedGauges.mcpUtilizationPercent30d.set(
+            totalToolCalls30d > 0 ? (mcpTotal / totalToolCalls30d) * 100 : 0,
+        );
 
         console.log('Advanced metrics updated.');
     } catch (error) {
