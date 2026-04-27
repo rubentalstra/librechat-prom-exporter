@@ -17,7 +17,6 @@ export const Key = models.Key;
 export const Message = models.Message;
 export const PluginAuth = models.PluginAuth;
 export const Preset = models.Preset;
-export const Project = models.Project;
 export const PromptGroup = models.PromptGroup;
 // Note: The original Prompt.ts file incorrectly used roleSchema to create a 'Role' model,
 // so we maintain the export name 'Prompt' for backward compatibility in metrics code

@@ -76,6 +76,20 @@ export const advancedGauges = {
         help: 'Percentage of messages with thumbs down feedback per agent (last 30 days)',
         labelNames: ['agent'],
     }),
+    feedbackEngagementRate30d: new client.Gauge({
+        name: 'librechat_feedback_engagement_rate_30d',
+        help: 'Percentage of assistant messages (last 30 days) that received any feedback',
+    }),
+    netSatisfactionByModel30d: new client.Gauge({
+        name: 'librechat_net_satisfaction_by_model_30d',
+        help: 'Net satisfaction score per model (last 30 days): (thumbsUp - thumbsDown) / total * 100',
+        labelNames: ['model'],
+    }),
+    netSatisfactionByAgent30d: new client.Gauge({
+        name: 'librechat_net_satisfaction_by_agent_30d',
+        help: 'Net satisfaction score per agent (last 30 days): (thumbsUp - thumbsDown) / total * 100',
+        labelNames: ['agent'],
+    }),
 
     // Banner metrics
     activeBannerCount: new client.Gauge({
@@ -112,6 +126,11 @@ export const advancedGauges = {
     userCountByDomain: new client.Gauge({
         name: 'librechat_user_count_by_email_domain',
         help: 'Number of users grouped by email domain',
+        labelNames: ['email_domain'],
+    }),
+    userPercentByDomain30d: new client.Gauge({
+        name: 'librechat_user_percent_by_email_domain_30d',
+        help: 'Percentage of active users by email domain (last 30 days)',
         labelNames: ['email_domain'],
     }),
 
@@ -243,17 +262,7 @@ export const advancedGauges = {
         help: 'Total number of distinct deployed model names found in messages',
     }),
 
-    // Internal user metrics
-    internalAdoptionRate30d: new client.Gauge({
-        name: 'librechat_internal_adoption_rate_30d',
-        help: 'Percentage of internal (NOS group) unique users vs total unique users in the last 30 days',
-    }),
-
-    // Adoption rate metrics
-    adoptionRate1d: new client.Gauge({
-        name: 'librechat_adoption_rate_1d',
-        help: 'Percentage of active users (last 1 day) vs total registered users',
-    }),
+    // Adoption rate metrics (1d omitted — equivalent to periodicityDaily)
     adoptionRate7d: new client.Gauge({
         name: 'librechat_adoption_rate_7d',
         help: 'Percentage of active users (last 7 days) vs total registered users',
@@ -261,6 +270,20 @@ export const advancedGauges = {
     adoptionRate30d: new client.Gauge({
         name: 'librechat_adoption_rate_30d',
         help: 'Percentage of active users (last 30 days) vs total registered users',
+    }),
+
+    // Usage periodicity metrics
+    periodicityDaily: new client.Gauge({
+        name: 'librechat_periodicity_daily',
+        help: 'Percentage of registered users active today (last 24h)',
+    }),
+    periodicityWeekly: new client.Gauge({
+        name: 'librechat_periodicity_weekly',
+        help: 'Percentage of registered users active 3+ days in the last 7 days',
+    }),
+    periodicityMonthly: new client.Gauge({
+        name: 'librechat_periodicity_monthly',
+        help: 'Percentage of registered users active 5+ days in the last 30 days',
     }),
 
     // MCP utilization metrics (30 days)
@@ -470,14 +493,46 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.uniqueUserCount30d.set(uniqueUsers30d.length);
 
         // --- Adoption Rates (active users / total users) ---
-        advancedGauges.adoptionRate1d.set(
-            totalUserCount > 0 ? (uniqueUsers1d.length / totalUserCount) * 100 : 0,
-        );
+        // Note: 1d adoption rate is identical to periodicityDaily and emitted there.
         advancedGauges.adoptionRate7d.set(
             totalUserCount > 0 ? (uniqueUsers7d.length / totalUserCount) * 100 : 0,
         );
         advancedGauges.adoptionRate30d.set(
             totalUserCount > 0 ? (uniqueUsers30d.length / totalUserCount) * 100 : 0,
+        );
+
+        // --- Usage Periodicity Metrics ---
+        // Daily: % of registered users active today
+        advancedGauges.periodicityDaily.set(
+            totalUserCount > 0 ? (uniqueUsers1d.length / totalUserCount) * 100 : 0,
+        );
+
+        // Weekly: % of registered users with 3+ active days in the last 7 days
+        // Monthly: % of registered users with 5+ active days in the last 30 days
+        const [weeklyPeriodicityAgg, monthlyPeriodicityAgg] = await Promise.all([
+            Message.aggregate([
+                { $match: { createdAt: { $gte: sevenDaysAgo } } },
+                { $group: { _id: { user: '$user', day: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } } } } },
+                { $group: { _id: '$_id.user', activeDays: { $sum: 1 } } },
+                { $match: { activeDays: { $gte: 3 } } },
+                { $count: 'count' },
+            ]),
+            Message.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+                { $group: { _id: { user: '$user', day: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } } } } },
+                { $group: { _id: '$_id.user', activeDays: { $sum: 1 } } },
+                { $match: { activeDays: { $gte: 5 } } },
+                { $count: 'count' },
+            ]),
+        ]);
+
+        const weeklyPeriodicityCount = weeklyPeriodicityAgg[0]?.count || 0;
+        const monthlyPeriodicityCount = monthlyPeriodicityAgg[0]?.count || 0;
+        advancedGauges.periodicityWeekly.set(
+            totalUserCount > 0 ? (weeklyPeriodicityCount / totalUserCount) * 100 : 0,
+        );
+        advancedGauges.periodicityMonthly.set(
+            totalUserCount > 0 ? (monthlyPeriodicityCount / totalUserCount) * 100 : 0,
         );
 
         // --- Combined Active/Unique Users by Email Domain (5min, 1d, 7d, 30d) ---
@@ -497,7 +552,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
         ]);
 
         // Process results and set metrics
-        const [activeUsersByDomainAgg, uniqueUsers1dByDomainAgg, uniqueUsers7dByDomainAgg, uniqueUsers30dByDomainAgg] = [
+        const [
+            activeUsersByDomainAgg,
+            uniqueUsers1dByDomainAgg,
+            uniqueUsers7dByDomainAgg,
+            uniqueUsers30dByDomainAgg,
+        ] = [
             usersByDomainResults[0]?.active5min || [],
             usersByDomainResults[0]?.unique1d || [],
             usersByDomainResults[0]?.unique7d || [],
@@ -522,6 +582,18 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.uniqueUserCount30dByDomain.reset();
         for (const result of uniqueUsers30dByDomainAgg) {
             advancedGauges.uniqueUserCount30dByDomain.set({ email_domain: result.domain }, result.count);
+        }
+
+        // --- User Percent By Email Domain (30 days) ---
+        const totalUniqueUsers30d = uniqueUsers30dByDomainAgg.reduce(
+            (sum: number, r: { count: number }) => sum + r.count, 0,
+        );
+        advancedGauges.userPercentByDomain30d.reset();
+        for (const result of uniqueUsers30dByDomainAgg) {
+            advancedGauges.userPercentByDomain30d.set(
+                { email_domain: result.domain },
+                totalUniqueUsers30d > 0 ? (result.count / totalUniqueUsers30d) * 100 : 0,
+            );
         }
 
         // --- Session Metrics ---
@@ -703,105 +775,117 @@ export async function updateAdvancedMetrics(): Promise<void> {
             }
         }
 
-        // --- Feedback Percentage by Model / Agent (30 days) ---
-        // Only assistant-generated messages (isCreatedByUser: false) are eligible for feedback.
-        const feedbackByModel30dAgg = await Message.aggregate([
-            { $match: { createdAt: { $gte: thirtyDaysAgo }, model: { $ne: null }, isCreatedByUser: false } },
-            {
-                $group: {
-                    _id: '$model',
-                    total: { $sum: 1 },
-                    thumbsUp: {
-                        $sum: { $cond: [{ $eq: ['$feedback.rating', 'thumbsUp'] }, 1, 0] },
-                    },
-                    thumbsDown: {
-                        $sum: { $cond: [{ $eq: ['$feedback.rating', 'thumbsDown'] }, 1, 0] },
+        // --- Parallelized: Feedback, Distinct Models, MCP (independent queries) ---
+        const [feedbackByModel30dAgg, distinctModelsAgg, toolCallContentAgg] = await Promise.all([
+            // Feedback by model/agent (30d) — only assistant messages are eligible
+            Message.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo }, model: { $ne: null }, isCreatedByUser: false } },
+                {
+                    $group: {
+                        _id: '$model',
+                        total: { $sum: 1 },
+                        thumbsUp: {
+                            $sum: { $cond: [{ $eq: ['$feedback.rating', 'thumbsUp'] }, 1, 0] },
+                        },
+                        thumbsDown: {
+                            $sum: { $cond: [{ $eq: ['$feedback.rating', 'thumbsDown'] }, 1, 0] },
+                        },
                     },
                 },
-            },
+            ]),
+            // Distinct deployed model names
+            Message.aggregate([
+                { $match: { model: { $ne: null } } },
+                { $group: { _id: '$model' } },
+            ]),
+            // MCP tool call content (30d)
+            Message.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo }, 'content.type': 'tool_call' } },
+                { $unwind: '$content' },
+                { $match: { 'content.type': 'tool_call' } },
+                {
+                    $addFields: {
+                        toolName: {
+                            $ifNull: [
+                                '$content.tool_call.name',
+                                { $ifNull: ['$content.tool_call.function.name', 'unknown'] },
+                            ],
+                        },
+                    },
+                },
+                {
+                    $facet: {
+                        totalToolCalls: [{ $count: 'count' }],
+                        mcpTotal: [
+                            { $match: { toolName: { $regex: '_mcp_' } } },
+                            { $count: 'count' },
+                        ],
+                        mcpByTool: [
+                            { $match: { toolName: { $regex: '_mcp_' } } },
+                            { $group: { _id: '$toolName', count: { $sum: 1 } } },
+                        ],
+                        mcpUniqueUsers: [
+                            { $match: { toolName: { $regex: '_mcp_' } } },
+                            { $group: { _id: '$user' } },
+                            { $count: 'count' },
+                        ],
+                    },
+                },
+            ]),
         ]);
 
+        // --- Feedback Percentage + Net Satisfaction by Model / Agent (30 days) ---
         advancedGauges.feedbackThumbsUpPercentByModel30d.reset();
         advancedGauges.feedbackThumbsDownPercentByModel30d.reset();
         advancedGauges.feedbackThumbsUpPercentByAgent30d.reset();
         advancedGauges.feedbackThumbsDownPercentByAgent30d.reset();
+        advancedGauges.netSatisfactionByModel30d.reset();
+        advancedGauges.netSatisfactionByAgent30d.reset();
+
+        let totalAssistantMessages30d = 0;
+        let totalFeedbackMessages30d = 0;
 
         for (const result of feedbackByModel30dAgg) {
             const id: string = result._id;
             const total: number = result.total;
-            if (total === 0) continue;
+            if (total === 0) {
+                continue;
+            }
+
+            totalAssistantMessages30d += total;
+            totalFeedbackMessages30d += result.thumbsUp + result.thumbsDown;
 
             const upPct = (result.thumbsUp / total) * 100;
             const downPct = (result.thumbsDown / total) * 100;
+            const netSatisfaction = ((result.thumbsUp - result.thumbsDown) / total) * 100;
 
             if (id.startsWith('agent_')) {
                 const displayName = agentMap.get(id) || id;
                 advancedGauges.feedbackThumbsUpPercentByAgent30d.set({ agent: displayName }, upPct);
                 advancedGauges.feedbackThumbsDownPercentByAgent30d.set({ agent: displayName }, downPct);
+                advancedGauges.netSatisfactionByAgent30d.set({ agent: displayName }, netSatisfaction);
             } else if (!id.startsWith('assistant_')) {
                 advancedGauges.feedbackThumbsUpPercentByModel30d.set({ model: id }, upPct);
                 advancedGauges.feedbackThumbsDownPercentByModel30d.set({ model: id }, downPct);
+                advancedGauges.netSatisfactionByModel30d.set({ model: id }, netSatisfaction);
             }
         }
 
-        // Count distinct deployed model names (excluding agents/assistants).
-        const distinctModelsAgg = await Message.aggregate([
-            { $match: { model: { $ne: null } } },
-            { $group: { _id: '$model' } },
-        ]);
+        // Feedback engagement rate: % of assistant messages that received any feedback
+        advancedGauges.feedbackEngagementRate30d.set(
+            totalAssistantMessages30d > 0
+                ? (totalFeedbackMessages30d / totalAssistantMessages30d) * 100
+                : 0,
+        );
+
+        // --- Distinct Deployed Model Names ---
         const filteredDistinctModels = distinctModelsAgg.filter((doc: { _id: string }) => {
             const id: string = doc._id;
             return !id.startsWith('agent_') && !id.startsWith('assistant_');
         });
         advancedGauges.deployedModelNamesCount.set(filteredDistinctModels.length);
 
-        // --- Internal Adoption Rate (30 days) ---
-        const internalDomains = new Set(['nos.pt', 'nos-acores.pt', 'nosmadeira.pt', 'tentwentyone.io', 'lojas.nos.pt', 'corporativo.pt']);
-        const internalUniqueUsers30d = uniqueUsers30dByDomainAgg
-            .filter((r: { domain: string; count: number }) => internalDomains.has(r.domain))
-            .reduce((sum: number, r: { count: number }) => sum + r.count, 0);
-        const totalUniqueUsers30d = uniqueUsers30d.length;
-        advancedGauges.internalAdoptionRate30d.set(
-            totalUniqueUsers30d > 0 ? (internalUniqueUsers30d / totalUniqueUsers30d) * 100 : 0,
-        );
-
         // --- MCP Utilization Metrics (30 days) ---
-        // MCP tool calls are NOT stored in the toolcalls collection.
-        // They are embedded as content parts (type: 'tool_call') within messages.
-        const toolCallContentAgg = await Message.aggregate([
-            { $match: { createdAt: { $gte: thirtyDaysAgo }, 'content.type': 'tool_call' } },
-            { $unwind: '$content' },
-            { $match: { 'content.type': 'tool_call' } },
-            {
-                $addFields: {
-                    toolName: {
-                        $ifNull: [
-                            '$content.tool_call.name',
-                            { $ifNull: ['$content.tool_call.function.name', 'unknown'] },
-                        ],
-                    },
-                },
-            },
-            {
-                $facet: {
-                    totalToolCalls: [{ $count: 'count' }],
-                    mcpTotal: [
-                        { $match: { toolName: { $regex: '_mcp_' } } },
-                        { $count: 'count' },
-                    ],
-                    mcpByTool: [
-                        { $match: { toolName: { $regex: '_mcp_' } } },
-                        { $group: { _id: '$toolName', count: { $sum: 1 } } },
-                    ],
-                    mcpUniqueUsers: [
-                        { $match: { toolName: { $regex: '_mcp_' } } },
-                        { $group: { _id: '$user' } },
-                        { $count: 'count' },
-                    ],
-                },
-            },
-        ]);
-
         const totalToolCalls30d = toolCallContentAgg[0]?.totalToolCalls[0]?.count || 0;
         const mcpTotal = toolCallContentAgg[0]?.mcpTotal[0]?.count || 0;
         const mcpByTool = toolCallContentAgg[0]?.mcpByTool || [];
