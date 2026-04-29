@@ -307,6 +307,14 @@ export const advancedGauges = {
 };
 
 /**
+ * Returns the percentage of `numerator` over `denominator`.
+ * Returns 0 when denominator is 0 to avoid division-by-zero.
+ */
+function toPercent(numerator: number, denominator: number): number {
+    return denominator > 0 ? (numerator / denominator) * 100 : 0;
+}
+
+/**
  * Helper function to create aggregation pipeline for users by email domain
  * @param timeFilter - Date filter for createdAt field
  * @returns Array of aggregation pipeline stages
@@ -390,8 +398,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.messageTokenAvg.set(tokenAvgAgg[0]?.avg || 0);
         advancedGauges.errorMessageCount.set(errorCount);
         advancedGauges.messageWithAttachmentsCount.set(msgWithAttachCount);
-        const pluginUsagePercent =
-            totalMsgCount > 0 ? (pluginUsageCount / totalMsgCount) * 100 : 0;
+        const pluginUsagePercent = toPercent(pluginUsageCount, totalMsgCount);
         advancedGauges.messagePluginUsagePercent.set(pluginUsagePercent);
 
         // Set feedback totals
@@ -494,18 +501,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         // --- Adoption Rates (active users / total users) ---
         // Note: 1d adoption rate is identical to periodicityDaily and emitted there.
-        advancedGauges.adoptionRate7d.set(
-            totalUserCount > 0 ? (uniqueUsers7d.length / totalUserCount) * 100 : 0,
-        );
-        advancedGauges.adoptionRate30d.set(
-            totalUserCount > 0 ? (uniqueUsers30d.length / totalUserCount) * 100 : 0,
-        );
+        advancedGauges.adoptionRate7d.set(toPercent(uniqueUsers7d.length, totalUserCount));
+        advancedGauges.adoptionRate30d.set(toPercent(uniqueUsers30d.length, totalUserCount));
 
         // --- Usage Periodicity Metrics ---
         // Daily: % of registered users active today
-        advancedGauges.periodicityDaily.set(
-            totalUserCount > 0 ? (uniqueUsers1d.length / totalUserCount) * 100 : 0,
-        );
+        advancedGauges.periodicityDaily.set(toPercent(uniqueUsers1d.length, totalUserCount));
 
         // Weekly: % of registered users with 3+ active days in the last 7 days
         // Monthly: % of registered users with 5+ active days in the last 30 days
@@ -528,12 +529,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         const weeklyPeriodicityCount = weeklyPeriodicityAgg[0]?.count || 0;
         const monthlyPeriodicityCount = monthlyPeriodicityAgg[0]?.count || 0;
-        advancedGauges.periodicityWeekly.set(
-            totalUserCount > 0 ? (weeklyPeriodicityCount / totalUserCount) * 100 : 0,
-        );
-        advancedGauges.periodicityMonthly.set(
-            totalUserCount > 0 ? (monthlyPeriodicityCount / totalUserCount) * 100 : 0,
-        );
+        advancedGauges.periodicityWeekly.set(toPercent(weeklyPeriodicityCount, totalUserCount));
+        advancedGauges.periodicityMonthly.set(toPercent(monthlyPeriodicityCount, totalUserCount));
 
         // --- Combined Active/Unique Users by Email Domain (5min, 1d, 7d, 30d) ---
         const usersByDomainResults = await Message.aggregate([
@@ -592,7 +589,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         for (const result of uniqueUsers30dByDomainAgg) {
             advancedGauges.userPercentByDomain30d.set(
                 { email_domain: result.domain },
-                totalUniqueUsers30d > 0 ? (result.count / totalUniqueUsers30d) * 100 : 0,
+                toPercent(result.count, totalUniqueUsers30d),
             );
         }
 
@@ -855,33 +852,40 @@ export async function updateAdvancedMetrics(): Promise<void> {
             totalAssistantMessages30d += total;
             totalFeedbackMessages30d += result.thumbsUp + result.thumbsDown;
 
-            const upPct = (result.thumbsUp / total) * 100;
-            const downPct = (result.thumbsDown / total) * 100;
-            const netSatisfaction = ((result.thumbsUp - result.thumbsDown) / total) * 100;
+            const upPct = toPercent(result.thumbsUp, total);
+            const downPct = toPercent(result.thumbsDown, total);
+            const netSatisfaction = toPercent(result.thumbsUp - result.thumbsDown, total);
 
-            if (id.startsWith('agent_')) {
-                const displayName = agentMap.get(id) || id;
-                advancedGauges.feedbackThumbsUpPercentByAgent30d.set({ agent: displayName }, upPct);
-                advancedGauges.feedbackThumbsDownPercentByAgent30d.set({ agent: displayName }, downPct);
-                advancedGauges.netSatisfactionByAgent30d.set({ agent: displayName }, netSatisfaction);
-            } else if (!id.startsWith('assistant_')) {
-                advancedGauges.feedbackThumbsUpPercentByModel30d.set({ model: id }, upPct);
-                advancedGauges.feedbackThumbsDownPercentByModel30d.set({ model: id }, downPct);
-                advancedGauges.netSatisfactionByModel30d.set({ model: id }, netSatisfaction);
+            const entityType = id.split('_')[0];
+            switch (entityType) {
+                case 'agent': {
+                    const displayName = agentMap.get(id) || id;
+                    advancedGauges.feedbackThumbsUpPercentByAgent30d.set({ agent: displayName }, upPct);
+                    advancedGauges.feedbackThumbsDownPercentByAgent30d.set({ agent: displayName }, downPct);
+                    advancedGauges.netSatisfactionByAgent30d.set({ agent: displayName }, netSatisfaction);
+                    break;
+                }
+                case 'assistant':
+                    // add for future assistant metrics
+                    break;
+                // had to be defaults as model have different naming conventions and we want to capture all models even if they don't follow a strict pattern
+                default:
+                    advancedGauges.feedbackThumbsUpPercentByModel30d.set({ model: id }, upPct);
+                    advancedGauges.feedbackThumbsDownPercentByModel30d.set({ model: id }, downPct);
+                    advancedGauges.netSatisfactionByModel30d.set({ model: id }, netSatisfaction);
+                    break;
             }
         }
 
         // Feedback engagement rate: % of assistant messages that received any feedback
         advancedGauges.feedbackEngagementRate30d.set(
-            totalAssistantMessages30d > 0
-                ? (totalFeedbackMessages30d / totalAssistantMessages30d) * 100
-                : 0,
+            toPercent(totalFeedbackMessages30d, totalAssistantMessages30d),
         );
 
         // --- Distinct Deployed Model Names ---
         const filteredDistinctModels = distinctModelsAgg.filter((doc: { _id: string }) => {
-            const id: string = doc._id;
-            return !id.startsWith('agent_') && !id.startsWith('assistant_');
+            const id: string = doc._id;          
+            return !id.startsWith('agent_') && !id.startsWith('assistant_');     
         });
         advancedGauges.deployedModelNamesCount.set(filteredDistinctModels.length);
 
@@ -899,9 +903,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         }
 
         advancedGauges.mcpUniqueUserCount30d.set(mcpUsers);
-        advancedGauges.mcpUtilizationPercent30d.set(
-            totalToolCalls30d > 0 ? (mcpTotal / totalToolCalls30d) * 100 : 0,
-        );
+        advancedGauges.mcpUtilizationPercent30d.set(toPercent(mcpTotal, totalToolCalls30d));
 
         console.log('Advanced metrics updated.');
     } catch (error) {

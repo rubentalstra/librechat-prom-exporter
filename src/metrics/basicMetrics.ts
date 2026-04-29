@@ -82,7 +82,6 @@ export async function updateBasicMetrics(): Promise<void> {
             Message.countDocuments({}),
             PluginAuth.countDocuments({}),
             Preset.countDocuments({}),
-            //Project.countDocuments({}),
             PromptGroup.countDocuments({}),
             Prompt.countDocuments({}),
             Session.countDocuments({}),
