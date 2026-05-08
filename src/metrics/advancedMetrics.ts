@@ -884,8 +884,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         // --- Distinct Deployed Model Names ---
         const filteredDistinctModels = distinctModelsAgg.filter((doc: { _id: string }) => {
-            const id: string = doc._id;          
-            return !id.startsWith('agent_') && !id.startsWith('assistant_');     
+            const id: string = doc._id;
+            return !id.startsWith('agent_') && !id.startsWith('assistant_');
         });
         advancedGauges.deployedModelNamesCount.set(filteredDistinctModels.length);
 
