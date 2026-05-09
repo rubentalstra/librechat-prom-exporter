@@ -13,7 +13,6 @@ import {
     Message,
     PluginAuth,
     Preset,
-    Project,
     PromptGroup,
     Prompt,
     Session,
@@ -37,7 +36,6 @@ export const basicGauges = {
     messages: new client.Gauge({ name: 'librechat_message_count', help: 'Total number of messages' }),
     pluginAuth: new client.Gauge({ name: 'librechat_plugin_auth_count', help: 'Total number of plugin auth records' }),
     presets: new client.Gauge({ name: 'librechat_preset_count', help: 'Total number of presets' }),
-    projects: new client.Gauge({ name: 'librechat_project_count', help: 'Total number of projects' }),
     promptGroups: new client.Gauge({ name: 'librechat_prompt_group_count', help: 'Total number of prompt groups' }),
     prompts: new client.Gauge({ name: 'librechat_prompt_count', help: 'Total number of prompts' }),
     sessions: new client.Gauge({ name: 'librechat_session_count', help: 'Total number of sessions' }),
@@ -63,7 +61,6 @@ export async function updateBasicMetrics(): Promise<void> {
             messageCount,
             pluginAuthCount,
             presetCount,
-            projectCount,
             promptGroupCount,
             promptCount,
             sessionCount,
@@ -85,7 +82,6 @@ export async function updateBasicMetrics(): Promise<void> {
             Message.countDocuments({}),
             PluginAuth.countDocuments({}),
             Preset.countDocuments({}),
-            Project.countDocuments({}),
             PromptGroup.countDocuments({}),
             Prompt.countDocuments({}),
             Session.countDocuments({}),
@@ -107,7 +103,6 @@ export async function updateBasicMetrics(): Promise<void> {
         basicGauges.messages.set(messageCount);
         basicGauges.pluginAuth.set(pluginAuthCount);
         basicGauges.presets.set(presetCount);
-        basicGauges.projects.set(projectCount);
         basicGauges.promptGroups.set(promptGroupCount);
         basicGauges.prompts.set(promptCount);
         basicGauges.sessions.set(sessionCount);
