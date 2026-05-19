@@ -21,7 +21,7 @@ for (const gauge of Object.values(basicGauges)) {
 
 // Register advanced gauges.
 for (const gauge of Object.values(advancedGauges)) {
-    register.registerMetric(gauge);
+    register.registerMetric(gauge as client.Metric);
 }
 
 // Connect to MongoDB (adjust the URI as needed)

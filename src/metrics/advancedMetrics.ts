@@ -10,6 +10,8 @@ import {
     Prompt,
     ToolCall,
     Conversation,
+    ConversationTag,
+    SharedLink,
     Transaction,
     Action,
 } from '../models';
@@ -233,6 +235,16 @@ export const advancedGauges = {
         name: 'librechat_transaction_token_avg',
         help: 'Average tokens (absolute rawAmount) per transaction',
     }),
+    transactionTokenSumByModelDomain: new client.Gauge({
+        name: 'librechat_transaction_token_sum_by_model_email_domain',
+        help: 'Sum of tokens (absolute rawAmount) per model and user email domain',
+        labelNames: ['model', 'tokenType', 'email_domain'],
+    }),
+    transactionTokenSumByModelUser: new client.Gauge({
+        name: 'librechat_transaction_token_sum_by_model_user',
+        help: 'Sum of tokens (absolute rawAmount) per model and user email',
+        labelNames: ['model', 'tokenType', 'email'],
+    }),
 
     // Action metrics
     actionCountByType: new client.Gauge({
@@ -251,6 +263,16 @@ export const advancedGauges = {
         name: 'librechat_agent_usage_count',
         help: 'Usage count for each agent',
         labelNames: ['agent'],
+    }),
+    agentUsageByDomainCount: new client.Gauge({
+        name: 'librechat_agent_usage_by_email_domain_count',
+        help: 'Usage count for each agent grouped by user email domain',
+        labelNames: ['agent', 'email_domain'],
+    }),
+    agentUsageByUserCount: new client.Gauge({
+        name: 'librechat_agent_usage_by_user_count',
+        help: 'Usage count for each agent grouped by user email',
+        labelNames: ['agent', 'email'],
     }),
     assistantUsageCount: new client.Gauge({
         name: 'librechat_assistant_usage_count',
@@ -303,6 +325,273 @@ export const advancedGauges = {
     mcpUtilizationPercent30d: new client.Gauge({
         name: 'librechat_mcp_utilization_percent_30d',
         help: 'Percentage of tool calls that are MCP in the last 30 days',
+    }),
+
+    // --- Activity & engagement ---
+    messagesTotal24h: new client.Gauge({
+        name: 'librechat_messages_total_24h',
+        help: 'Total messages created in the last 24 hours',
+    }),
+    messagesTotal7d: new client.Gauge({
+        name: 'librechat_messages_total_7d',
+        help: 'Total messages created in the last 7 days',
+    }),
+    messagesTotal30d: new client.Gauge({
+        name: 'librechat_messages_total_30d',
+        help: 'Total messages created in the last 30 days',
+    }),
+    messagesByHourOfDay: new client.Gauge({
+        name: 'librechat_messages_by_hour_of_day',
+        help: 'Count of messages bucketed by hour of day (UTC) over the last 30 days',
+        labelNames: ['hour'],
+    }),
+    messagesByWeekday: new client.Gauge({
+        name: 'librechat_messages_by_weekday',
+        help: 'Count of messages by weekday (1=Sunday..7=Saturday) over the last 30 days',
+        labelNames: ['weekday'],
+    }),
+    newUsers30d: new client.Gauge({
+        name: 'librechat_new_users_30d',
+        help: 'Number of users created in the last 30 days',
+    }),
+    newConversations24h: new client.Gauge({
+        name: 'librechat_new_conversations_24h',
+        help: 'Number of conversations created in the last 24 hours',
+    }),
+    newConversations7d: new client.Gauge({
+        name: 'librechat_new_conversations_7d',
+        help: 'Number of conversations created in the last 7 days',
+    }),
+    newConversations30d: new client.Gauge({
+        name: 'librechat_new_conversations_30d',
+        help: 'Number of conversations created in the last 30 days',
+    }),
+    userRetentionD7Percent: new client.Gauge({
+        name: 'librechat_user_retention_d7_percent',
+        help: 'Percent of registered (>=7d ago) users who were active in the last 7 days',
+    }),
+    userRetentionD30Percent: new client.Gauge({
+        name: 'librechat_user_retention_d30_percent',
+        help: 'Percent of registered (>=30d ago) users who were active in the last 30 days',
+    }),
+    avgMessagesPerUser30d: new client.Gauge({
+        name: 'librechat_avg_messages_per_user_30d',
+        help: 'Average messages per active user in the last 30 days',
+    }),
+    powerUsersCount30d: new client.Gauge({
+        name: 'librechat_power_users_count_30d',
+        help: 'Distribution of users by usage intensity in the last 30 days',
+        labelNames: ['tier'],
+    }),
+
+    // --- Conversation quality ---
+    conversationLengthP50: new client.Gauge({
+        name: 'librechat_conversation_length_p50',
+        help: 'P50 of messages per conversation',
+    }),
+    conversationLengthP90: new client.Gauge({
+        name: 'librechat_conversation_length_p90',
+        help: 'P90 of messages per conversation',
+    }),
+    conversationLengthP95: new client.Gauge({
+        name: 'librechat_conversation_length_p95',
+        help: 'P95 of messages per conversation',
+    }),
+    conversationDurationSecondsAvg: new client.Gauge({
+        name: 'librechat_conversation_duration_seconds_avg',
+        help: 'Average conversation duration in seconds (last message - first message)',
+    }),
+    conversationUnfinishedCount: new client.Gauge({
+        name: 'librechat_conversation_unfinished_count',
+        help: 'Count of messages with unfinished=true',
+    }),
+    messageErrorRateByModel: new client.Gauge({
+        name: 'librechat_message_error_rate_by_model',
+        help: 'Percent of messages with error=true per model',
+        labelNames: ['model'],
+    }),
+    messageErrorRate30d: new client.Gauge({
+        name: 'librechat_message_error_rate_30d',
+        help: 'Percent of messages (last 30 days) with error=true',
+    }),
+
+    // --- Tokens & cost (deeper slicing) ---
+    transactionCostByEmailDomain: new client.Gauge({
+        name: 'librechat_transaction_cost_by_email_domain',
+        help: 'Total transaction cost in USD grouped by user email domain',
+        labelNames: ['email_domain'],
+    }),
+    transactionCostByUser: new client.Gauge({
+        name: 'librechat_transaction_cost_by_user',
+        help: 'Total transaction cost in USD grouped by user email',
+        labelNames: ['email'],
+    }),
+    transactionCostByAgent: new client.Gauge({
+        name: 'librechat_transaction_cost_by_agent',
+        help: 'Total transaction cost in USD grouped by agent (derived from conversations using the agent)',
+        labelNames: ['agent'],
+    }),
+    transactionCost24h: new client.Gauge({
+        name: 'librechat_transaction_cost_24h',
+        help: 'Total transaction cost in USD over the last 24 hours',
+    }),
+    transactionCost7d: new client.Gauge({
+        name: 'librechat_transaction_cost_7d',
+        help: 'Total transaction cost in USD over the last 7 days',
+    }),
+    transactionCost30d: new client.Gauge({
+        name: 'librechat_transaction_cost_30d',
+        help: 'Total transaction cost in USD over the last 30 days',
+    }),
+    transactionTokenAvgPerMessageByModel: new client.Gauge({
+        name: 'librechat_transaction_token_avg_per_message_by_model',
+        help: 'Average tokens (abs rawAmount) per message per model',
+        labelNames: ['model'],
+    }),
+    transactionPromptCompletionRatioByModel: new client.Gauge({
+        name: 'librechat_transaction_prompt_completion_ratio_by_model',
+        help: 'Ratio of completion to prompt tokens per model',
+        labelNames: ['model'],
+    }),
+    costPerConversationAvg: new client.Gauge({
+        name: 'librechat_cost_per_conversation_avg',
+        help: 'Average transaction cost in USD per conversation',
+    }),
+
+    // --- Agents & assistants ---
+    agentUniqueUsersCount: new client.Gauge({
+        name: 'librechat_agent_unique_users_count',
+        help: 'Distinct users that used each agent (all time)',
+        labelNames: ['agent'],
+    }),
+    agentUniqueUsers30d: new client.Gauge({
+        name: 'librechat_agent_unique_users_30d',
+        help: 'Distinct users that used each agent in the last 30 days',
+        labelNames: ['agent'],
+    }),
+    agentCreationCountByDomain: new client.Gauge({
+        name: 'librechat_agent_creation_count_by_user_domain',
+        help: 'Number of agents created, grouped by the author user email domain',
+        labelNames: ['email_domain'],
+    }),
+    agentAvgMessagesPerUse: new client.Gauge({
+        name: 'librechat_agent_avg_messages_per_use',
+        help: 'Average messages per conversation that used the agent',
+        labelNames: ['agent'],
+    }),
+    agentLastUsedAgeSeconds: new client.Gauge({
+        name: 'librechat_agent_last_used_age_seconds',
+        help: 'Seconds since the agent was last used',
+        labelNames: ['agent'],
+    }),
+
+    // --- Tools & MCP ---
+    mcpToolCallByUserDomain30d: new client.Gauge({
+        name: 'librechat_mcp_tool_call_count_by_user_domain_30d',
+        help: 'MCP tool calls (30d) grouped by toolId and user email domain',
+        labelNames: ['toolId', 'email_domain'],
+    }),
+    mcpUniqueUsersByTool30d: new client.Gauge({
+        name: 'librechat_mcp_unique_users_by_tool_30d',
+        help: 'Distinct users per MCP toolId in the last 30 days',
+        labelNames: ['toolId'],
+    }),
+    toolCallAvgLatencySeconds: new client.Gauge({
+        name: 'librechat_tool_call_avg_latency_seconds',
+        help: 'Average tool call latency (updatedAt - createdAt) in seconds, per toolId',
+        labelNames: ['toolId'],
+    }),
+
+    // --- Files & attachments ---
+    fileCountByType: new client.Gauge({
+        name: 'librechat_file_count_by_type',
+        help: 'Count of files grouped by MIME type',
+        labelNames: ['type'],
+    }),
+    fileBytesByUserDomain: new client.Gauge({
+        name: 'librechat_file_bytes_by_user_domain',
+        help: 'Total file bytes grouped by user email domain',
+        labelNames: ['email_domain'],
+    }),
+    fileUploadCount24h: new client.Gauge({
+        name: 'librechat_file_upload_count_24h',
+        help: 'Files uploaded in the last 24 hours',
+    }),
+    fileUploadCount7d: new client.Gauge({
+        name: 'librechat_file_upload_count_7d',
+        help: 'Files uploaded in the last 7 days',
+    }),
+    fileSizeP50: new client.Gauge({
+        name: 'librechat_file_size_p50_bytes',
+        help: 'P50 of file size in bytes',
+    }),
+    fileSizeP95: new client.Gauge({
+        name: 'librechat_file_size_p95_bytes',
+        help: 'P95 of file size in bytes',
+    }),
+
+    // --- Feedback extensions ---
+    feedbackCountByTag: new client.Gauge({
+        name: 'librechat_feedback_count_by_tag',
+        help: 'Count of feedback ratings grouped by tag and rating',
+        labelNames: ['tag', 'rating'],
+    }),
+    feedbackCountByDomain30d: new client.Gauge({
+        name: 'librechat_feedback_count_by_domain_30d',
+        help: 'Count of feedback ratings (30d) grouped by user email domain and rating',
+        labelNames: ['email_domain', 'rating'],
+    }),
+
+    // --- Sessions & auth ---
+    sessionActiveCount: new client.Gauge({
+        name: 'librechat_session_active_count',
+        help: 'Number of sessions whose expiration is in the future',
+    }),
+    sessionExpiredCount24h: new client.Gauge({
+        name: 'librechat_session_expired_count_24h',
+        help: 'Number of sessions that expired in the last 24 hours',
+    }),
+    userEmailVerifiedPercent: new client.Gauge({
+        name: 'librechat_user_email_verified_percent',
+        help: 'Percent of users with emailVerified=true',
+    }),
+    userCountByRole: new client.Gauge({
+        name: 'librechat_user_count_by_role',
+        help: 'Number of users grouped by role',
+        labelNames: ['role'],
+    }),
+
+    // --- Prompts library & conversation tags ---
+    promptGroupCountByCategory: new client.Gauge({
+        name: 'librechat_prompt_group_count_by_category',
+        help: 'Count of prompt groups by category',
+        labelNames: ['category'],
+    }),
+    sharedLinkCount24h: new client.Gauge({
+        name: 'librechat_shared_link_count_24h',
+        help: 'Shared links created in the last 24 hours',
+    }),
+    conversationTagUsageCount: new client.Gauge({
+        name: 'librechat_conversation_tag_usage_count',
+        help: 'Usage count per conversation tag (sum of ConversationTag.count grouped by tag)',
+        labelNames: ['tag'],
+    }),
+
+    // --- Exporter operational ---
+    exporterScrapeDurationSeconds: new client.Gauge({
+        name: 'librechat_exporter_scrape_duration_seconds',
+        help: 'Duration of the most recent scrape per metric group',
+        labelNames: ['metric_group'],
+    }),
+    exporterScrapeErrorsTotal: new client.Counter({
+        name: 'librechat_exporter_scrape_errors_total',
+        help: 'Total number of scrape errors per metric group',
+        labelNames: ['metric_group'],
+    }),
+    exporterLastSuccessfulScrapeTimestamp: new client.Gauge({
+        name: 'librechat_exporter_last_successful_scrape_timestamp',
+        help: 'Unix timestamp (seconds) of the last successful scrape per metric group',
+        labelNames: ['metric_group'],
     }),
 };
 
@@ -729,6 +1018,70 @@ export async function updateAdvancedMetrics(): Promise<void> {
             advancedGauges.transactionCostPerModel.set({ model: cm._id }, cm.totalCost);
         }
 
+        // --- Token usage per model per user / email domain ---
+        const tokensByModelUserAgg: Array<{
+            model: string;
+            tokenType: string;
+            email: string | null;
+            tokens: number;
+        }> = await Transaction.aggregate([
+            { $match: { model: { $nin: [null, 'unknown', 'UNKNOWN'] } } },
+            {
+                $group: {
+                    _id: {
+                        model: '$model',
+                        user: '$user',
+                        tokenType: { $ifNull: ['$tokenType', 'unknown'] },
+                    },
+                    tokens: { $sum: { $abs: '$rawAmount' } },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id.user',
+                    foreignField: '_id',
+                    as: 'userDetails',
+                },
+            },
+            { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    _id: 0,
+                    model: '$_id.model',
+                    tokenType: '$_id.tokenType',
+                    email: '$userDetails.email',
+                    tokens: 1,
+                },
+            },
+        ]);
+
+        advancedGauges.transactionTokenSumByModelUser.reset();
+        advancedGauges.transactionTokenSumByModelDomain.reset();
+        const tokensByModelDomain: Map<string, number> = new Map();
+        for (const row of tokensByModelUserAgg) {
+            const email = row.email || 'unknown';
+            const emailDomain = email.includes('@') ? email.split('@')[1] : 'unknown';
+
+            advancedGauges.transactionTokenSumByModelUser.set(
+                { model: row.model, tokenType: row.tokenType, email },
+                row.tokens,
+            );
+
+            const domainKey = `${row.model}\u0000${row.tokenType}\u0000${emailDomain}`;
+            tokensByModelDomain.set(
+                domainKey,
+                (tokensByModelDomain.get(domainKey) || 0) + row.tokens,
+            );
+        }
+        for (const [key, tokens] of tokensByModelDomain.entries()) {
+            const [model, tokenType, email_domain] = key.split('\u0000');
+            advancedGauges.transactionTokenSumByModelDomain.set(
+                { model, tokenType, email_domain },
+                tokens,
+            );
+        }
+
         // --- Action Metrics ---
         const actionAgg = await Action.aggregate([
             { $group: { _id: '$type', count: { $sum: 1 } } },
@@ -754,6 +1107,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
         advancedGauges.deployedModelUsageCount.reset();
         advancedGauges.agentUsageCount.reset();
         advancedGauges.assistantUsageCount.reset();
+        advancedGauges.agentUsageByDomainCount.reset();
+        advancedGauges.agentUsageByUserCount.reset();
 
         for (const result of deployedModelsAgg) {
             const id: string = result._id;
@@ -770,6 +1125,77 @@ export async function updateAdvancedMetrics(): Promise<void> {
             } else {
                 advancedGauges.deployedModelUsageCount.set({ model: id }, result.count);
             }
+        }
+
+        // --- Agent usage broken down by user email and email domain ---
+        const agentUsageByUserAgg: Array<{
+            agentId: string;
+            email: string | null;
+            count: number;
+        }> = await Message.aggregate([
+            { $match: { model: { $regex: /^agent_/ } } },
+            {
+                $group: {
+                    _id: { model: '$model', user: '$user' },
+                    count: { $sum: 1 },
+                },
+            },
+            {
+                $addFields: {
+                    userObjectId: {
+                        $convert: {
+                            input: '$_id.user',
+                            to: 'objectId',
+                            onError: null,
+                            onNull: null,
+                        },
+                    },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userObjectId',
+                    foreignField: '_id',
+                    as: 'userDetails',
+                },
+            },
+            { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    _id: 0,
+                    agentId: '$_id.model',
+                    email: '$userDetails.email',
+                    count: 1,
+                },
+            },
+        ]);
+
+        const agentDomainCounts: Map<string, number> = new Map();
+        for (const row of agentUsageByUserAgg) {
+            if (!agentMap.has(row.agentId)) {
+                continue;
+            }
+            const agent = agentMap.get(row.agentId)!;
+            const email = row.email || 'unknown';
+            const emailDomain = email.includes('@') ? email.split('@')[1] : 'unknown';
+
+            advancedGauges.agentUsageByUserCount.set(
+                { agent, email },
+                row.count,
+            );
+
+            const domainKey = `${agent}|${emailDomain}`;
+            agentDomainCounts.set(
+                domainKey,
+                (agentDomainCounts.get(domainKey) || 0) + row.count,
+            );
+        }
+        for (const [key, count] of agentDomainCounts.entries()) {
+            const sepIdx = key.indexOf('|');
+            const agent = key.slice(0, sepIdx);
+            const email_domain = key.slice(sepIdx + 1);
+            advancedGauges.agentUsageByDomainCount.set({ agent, email_domain }, count);
         }
 
         // --- Parallelized: Feedback, Distinct Models, MCP (independent queries) ---
@@ -904,6 +1330,812 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
         advancedGauges.mcpUniqueUserCount30d.set(mcpUsers);
         advancedGauges.mcpUtilizationPercent30d.set(toPercent(mcpTotal, totalToolCalls30d));
+
+        // ============================================================
+        // === Extended metrics (Activity, Quality, Cost, Agents...) ===
+        // ============================================================
+
+        // --- Activity & engagement (parallel) ---
+        const [
+            msg24h,
+            msg7d,
+            msg30d,
+            msgByHourAgg,
+            msgByWeekdayAgg,
+            newUsers30dCount,
+            newConv24h,
+            newConv7d,
+            newConv30d,
+            registered7dPlus,
+            registered30dPlus,
+            powerUserAgg,
+        ] = await Promise.all([
+            Message.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+            Message.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+            Message.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+            Message.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+                { $group: { _id: { $hour: '$createdAt' }, count: { $sum: 1 } } },
+            ]),
+            Message.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+                { $group: { _id: { $dayOfWeek: '$createdAt' }, count: { $sum: 1 } } },
+            ]),
+            User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+            Conversation.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+            Conversation.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+            Conversation.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+            User.countDocuments({ createdAt: { $lte: sevenDaysAgo } }),
+            User.countDocuments({ createdAt: { $lte: thirtyDaysAgo } }),
+            Message.aggregate([
+                { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+                { $group: { _id: '$user', msgCount: { $sum: 1 } } },
+                {
+                    $bucket: {
+                        groupBy: '$msgCount',
+                        boundaries: [1, 10, 50, Number.MAX_SAFE_INTEGER],
+                        default: 'other',
+                        output: { count: { $sum: 1 } },
+                    },
+                },
+            ]),
+        ]);
+
+        advancedGauges.messagesTotal24h.set(msg24h);
+        advancedGauges.messagesTotal7d.set(msg7d);
+        advancedGauges.messagesTotal30d.set(msg30d);
+        advancedGauges.newUsers30d.set(newUsers30dCount);
+        advancedGauges.newConversations24h.set(newConv24h);
+        advancedGauges.newConversations7d.set(newConv7d);
+        advancedGauges.newConversations30d.set(newConv30d);
+
+        advancedGauges.messagesByHourOfDay.reset();
+        for (let h = 0; h < 24; h++) {
+            advancedGauges.messagesByHourOfDay.set({ hour: String(h) }, 0);
+        }
+        for (const row of msgByHourAgg) {
+            advancedGauges.messagesByHourOfDay.set(
+                { hour: String(row._id) },
+                row.count,
+            );
+        }
+
+        advancedGauges.messagesByWeekday.reset();
+        for (let w = 1; w <= 7; w++) {
+            advancedGauges.messagesByWeekday.set({ weekday: String(w) }, 0);
+        }
+        for (const row of msgByWeekdayAgg) {
+            advancedGauges.messagesByWeekday.set(
+                { weekday: String(row._id) },
+                row.count,
+            );
+        }
+
+        // Retention: % registered N days ago who were active in the last N days
+        advancedGauges.userRetentionD7Percent.set(
+            toPercent(uniqueUsers7d.length, registered7dPlus),
+        );
+        advancedGauges.userRetentionD30Percent.set(
+            toPercent(uniqueUsers30d.length, registered30dPlus),
+        );
+
+        // Avg messages per active user in 30d
+        advancedGauges.avgMessagesPerUser30d.set(
+            uniqueUsers30d.length > 0 ? msg30d / uniqueUsers30d.length : 0,
+        );
+
+        // Power user tier buckets
+        advancedGauges.powerUsersCount30d.reset();
+        const tierLabels: Record<string, string> = {
+            '1': 'light',
+            '10': 'medium',
+            '50': 'heavy',
+        };
+        for (const row of powerUserAgg) {
+            const tier = tierLabels[String(row._id)] || 'other';
+            advancedGauges.powerUsersCount30d.set({ tier }, row.count);
+        }
+
+        // --- Conversation quality (parallel) ---
+        const [
+            convLengthPercAgg,
+            convDurationAgg,
+            unfinishedCount,
+            errorByModelAgg,
+            err30dCount,
+        ] = await Promise.all([
+            Conversation.aggregate([
+                { $project: { msgCount: { $size: { $ifNull: ['$messages', []] } } } },
+                {
+                    $group: {
+                        _id: null,
+                        p: {
+                            $percentile: {
+                                p: [0.5, 0.9, 0.95],
+                                input: '$msgCount',
+                                method: 'approximate',
+                            },
+                        },
+                    },
+                },
+            ]).catch(() => [] as Array<{ p: number[] }>),
+            Message.aggregate([
+                {
+                    $group: {
+                        _id: '$conversationId',
+                        firstAt: { $min: '$createdAt' },
+                        lastAt: { $max: '$createdAt' },
+                    },
+                },
+                {
+                    $project: {
+                        durationSec: {
+                            $divide: [{ $subtract: ['$lastAt', '$firstAt'] }, 1000],
+                        },
+                    },
+                },
+                { $group: { _id: null, avg: { $avg: '$durationSec' } } },
+            ]),
+            Message.countDocuments({ unfinished: true }),
+            Message.aggregate([
+                {
+                    $match: {
+                        model: { $ne: null },
+                        createdAt: { $gte: thirtyDaysAgo },
+                    },
+                },
+                {
+                    $group: {
+                        _id: '$model',
+                        total: { $sum: 1 },
+                        errors: {
+                            $sum: { $cond: [{ $eq: ['$error', true] }, 1, 0] },
+                        },
+                    },
+                },
+            ]),
+            Message.countDocuments({
+                error: true,
+                createdAt: { $gte: thirtyDaysAgo },
+            }),
+        ]);
+
+        const convPerc = convLengthPercAgg[0]?.p as number[] | undefined;
+        advancedGauges.conversationLengthP50.set(convPerc?.[0] || 0);
+        advancedGauges.conversationLengthP90.set(convPerc?.[1] || 0);
+        advancedGauges.conversationLengthP95.set(convPerc?.[2] || 0);
+        advancedGauges.conversationDurationSecondsAvg.set(convDurationAgg[0]?.avg || 0);
+        advancedGauges.conversationUnfinishedCount.set(unfinishedCount);
+
+        advancedGauges.messageErrorRateByModel.reset();
+        for (const row of errorByModelAgg) {
+            advancedGauges.messageErrorRateByModel.set(
+                { model: row._id },
+                toPercent(row.errors, row.total),
+            );
+        }
+        advancedGauges.messageErrorRate30d.set(toPercent(err30dCount, msg30d));
+
+        // --- Cost: total per window + cost/conversation + per-domain/user/agent ---
+        const costPipelineProject = [
+            { $match: { model: { $nin: [null, 'unknown', 'UNKNOWN'] } } },
+            {
+                $project: {
+                    user: 1,
+                    conversationId: 1,
+                    createdAt: 1,
+                    model: 1,
+                    tokenType: { $ifNull: ['$tokenType', 'unknown'] },
+                    rawAmount: 1,
+                    tokenValue: {
+                        $cond: {
+                            if: { $ifNull: ['$tokenValue', false] },
+                            then: '$tokenValue',
+                            else: {
+                                $multiply: [
+                                    { $abs: '$rawAmount' },
+                                    { $ifNull: ['$rate', 1] },
+                                ],
+                            },
+                        },
+                    },
+                },
+            },
+            { $addFields: { costUSD: { $divide: [{ $abs: '$tokenValue' }, 1e6] } } },
+        ];
+
+        const [
+            costByWindowAgg,
+            costByDomainUserAgg,
+            tokensByModelTypeAgg,
+            costByAgentAgg,
+            totalConvCount,
+        ] = await Promise.all([
+            Transaction.aggregate([
+                ...costPipelineProject,
+                {
+                    $facet: {
+                        c24h: [
+                            { $match: { createdAt: { $gte: oneDayAgo } } },
+                            { $group: { _id: null, total: { $sum: '$costUSD' } } },
+                        ],
+                        c7d: [
+                            { $match: { createdAt: { $gte: sevenDaysAgo } } },
+                            { $group: { _id: null, total: { $sum: '$costUSD' } } },
+                        ],
+                        c30d: [
+                            { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+                            { $group: { _id: null, total: { $sum: '$costUSD' } } },
+                        ],
+                    },
+                },
+            ]),
+            Transaction.aggregate([
+                ...costPipelineProject,
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'user',
+                        foreignField: '_id',
+                        as: 'u',
+                    },
+                },
+                { $unwind: { path: '$u', preserveNullAndEmptyArrays: true } },
+                {
+                    $group: {
+                        _id: { email: '$u.email' },
+                        cost: { $sum: '$costUSD' },
+                    },
+                },
+            ]),
+            Transaction.aggregate([
+                { $match: { model: { $nin: [null, 'unknown', 'UNKNOWN'] } } },
+                {
+                    $group: {
+                        _id: {
+                            model: '$model',
+                            tokenType: { $ifNull: ['$tokenType', 'unknown'] },
+                        },
+                        tokens: { $sum: { $abs: '$rawAmount' } },
+                        msgs: { $addToSet: '$conversationId' },
+                    },
+                },
+                {
+                    $project: {
+                        model: '$_id.model',
+                        tokenType: '$_id.tokenType',
+                        tokens: 1,
+                        convs: { $size: '$msgs' },
+                    },
+                },
+            ]),
+            Transaction.aggregate([
+                ...costPipelineProject,
+                { $match: { conversationId: { $ne: null } } },
+                {
+                    $lookup: {
+                        from: 'conversations',
+                        localField: 'conversationId',
+                        foreignField: 'conversationId',
+                        as: 'conv',
+                    },
+                },
+                { $unwind: '$conv' },
+                {
+                    $match: {
+                        'conv.agent_id': { $exists: true, $ne: null },
+                    },
+                },
+                {
+                    $group: {
+                        _id: '$conv.agent_id',
+                        cost: { $sum: '$costUSD' },
+                    },
+                },
+            ]),
+            Conversation.countDocuments({}),
+        ]);
+
+        advancedGauges.transactionCost24h.set(
+            costByWindowAgg[0]?.c24h[0]?.total || 0,
+        );
+        advancedGauges.transactionCost7d.set(
+            costByWindowAgg[0]?.c7d[0]?.total || 0,
+        );
+        advancedGauges.transactionCost30d.set(
+            costByWindowAgg[0]?.c30d[0]?.total || 0,
+        );
+
+        advancedGauges.transactionCostByUser.reset();
+        advancedGauges.transactionCostByEmailDomain.reset();
+        const costByDomainMap: Map<string, number> = new Map();
+        for (const row of costByDomainUserAgg) {
+            const email = row._id?.email || 'unknown';
+            const domain = email.includes('@') ? email.split('@')[1] : 'unknown';
+            advancedGauges.transactionCostByUser.set({ email }, row.cost);
+            costByDomainMap.set(
+                domain,
+                (costByDomainMap.get(domain) || 0) + row.cost,
+            );
+        }
+        for (const [email_domain, cost] of costByDomainMap.entries()) {
+            advancedGauges.transactionCostByEmailDomain.set(
+                { email_domain },
+                cost,
+            );
+        }
+
+        // Tokens per message + prompt/completion ratio per model
+        const tokensByModelTotal: Map<string, number> = new Map();
+        const tokensByModelType: Map<string, Record<string, number>> = new Map();
+        const convsByModel: Map<string, number> = new Map();
+        for (const row of tokensByModelTypeAgg) {
+            const m: string = row.model;
+            tokensByModelTotal.set(m, (tokensByModelTotal.get(m) || 0) + row.tokens);
+            const byType = tokensByModelType.get(m) || {};
+            byType[row.tokenType] = (byType[row.tokenType] || 0) + row.tokens;
+            tokensByModelType.set(m, byType);
+            convsByModel.set(m, Math.max(convsByModel.get(m) || 0, row.convs));
+        }
+        advancedGauges.transactionTokenAvgPerMessageByModel.reset();
+        advancedGauges.transactionPromptCompletionRatioByModel.reset();
+        for (const [m, total] of tokensByModelTotal.entries()) {
+            const convs = convsByModel.get(m) || 0;
+            advancedGauges.transactionTokenAvgPerMessageByModel.set(
+                { model: m },
+                convs > 0 ? total / convs : 0,
+            );
+            const byType = tokensByModelType.get(m) || {};
+            const prompt = byType.prompt || 0;
+            const completion = byType.completion || 0;
+            advancedGauges.transactionPromptCompletionRatioByModel.set(
+                { model: m },
+                prompt > 0 ? completion / prompt : 0,
+            );
+        }
+
+        advancedGauges.transactionCostByAgent.reset();
+        for (const row of costByAgentAgg) {
+            const agentId: string = row._id;
+            const displayName = agentMap.get(agentId) || agentId;
+            advancedGauges.transactionCostByAgent.set(
+                { agent: displayName },
+                row.cost,
+            );
+        }
+        advancedGauges.costPerConversationAvg.set(
+            totalConvCount > 0 ? totalCost / totalConvCount : 0,
+        );
+
+        // --- Agents: unique users, last used, avg messages per use, creation by domain ---
+        const [
+            agentUniqueUsersAllAgg,
+            agentUniqueUsers30dAgg,
+            agentLastUsedAgg,
+            agentMsgsPerConvAgg,
+            agentByAuthorAgg,
+        ] = await Promise.all([
+            Message.aggregate([
+                { $match: { model: { $regex: /^agent_/ } } },
+                { $group: { _id: { model: '$model', user: '$user' } } },
+                { $group: { _id: '$_id.model', users: { $sum: 1 } } },
+            ]),
+            Message.aggregate([
+                {
+                    $match: {
+                        model: { $regex: /^agent_/ },
+                        createdAt: { $gte: thirtyDaysAgo },
+                    },
+                },
+                { $group: { _id: { model: '$model', user: '$user' } } },
+                { $group: { _id: '$_id.model', users: { $sum: 1 } } },
+            ]),
+            Message.aggregate([
+                { $match: { model: { $regex: /^agent_/ } } },
+                { $group: { _id: '$model', last: { $max: '$createdAt' } } },
+            ]),
+            Message.aggregate([
+                { $match: { model: { $regex: /^agent_/ } } },
+                {
+                    $group: {
+                        _id: { model: '$model', conv: '$conversationId' },
+                        msgs: { $sum: 1 },
+                    },
+                },
+                { $group: { _id: '$_id.model', avgMsgs: { $avg: '$msgs' } } },
+            ]),
+            Agent.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'author',
+                        foreignField: '_id',
+                        as: 'u',
+                    },
+                },
+                { $unwind: { path: '$u', preserveNullAndEmptyArrays: true } },
+                { $group: { _id: '$u.email', count: { $sum: 1 } } },
+            ]),
+        ]);
+
+        advancedGauges.agentUniqueUsersCount.reset();
+        for (const row of agentUniqueUsersAllAgg) {
+            const name = agentMap.get(row._id);
+            if (!name) {continue;}
+            advancedGauges.agentUniqueUsersCount.set({ agent: name }, row.users);
+        }
+        advancedGauges.agentUniqueUsers30d.reset();
+        for (const row of agentUniqueUsers30dAgg) {
+            const name = agentMap.get(row._id);
+            if (!name) {continue;}
+            advancedGauges.agentUniqueUsers30d.set({ agent: name }, row.users);
+        }
+        advancedGauges.agentLastUsedAgeSeconds.reset();
+        for (const row of agentLastUsedAgg) {
+            const name = agentMap.get(row._id);
+            if (!name) {continue;}
+            const ageSec = (now.getTime() - new Date(row.last).getTime()) / 1000;
+            advancedGauges.agentLastUsedAgeSeconds.set({ agent: name }, ageSec);
+        }
+        advancedGauges.agentAvgMessagesPerUse.reset();
+        for (const row of agentMsgsPerConvAgg) {
+            const name = agentMap.get(row._id);
+            if (!name) {continue;}
+            advancedGauges.agentAvgMessagesPerUse.set(
+                { agent: name },
+                row.avgMsgs,
+            );
+        }
+        advancedGauges.agentCreationCountByDomain.reset();
+        const agentByDomainMap: Map<string, number> = new Map();
+        for (const row of agentByAuthorAgg) {
+            const email: string | null = row._id;
+            const domain = email && email.includes('@') ? email.split('@')[1] : 'unknown';
+            agentByDomainMap.set(domain, (agentByDomainMap.get(domain) || 0) + row.count);
+        }
+        for (const [email_domain, count] of agentByDomainMap.entries()) {
+            advancedGauges.agentCreationCountByDomain.set(
+                { email_domain },
+                count,
+            );
+        }
+
+        // --- MCP per-tool per-domain & unique users + tool call latency ---
+        const [mcpByToolDomainAgg, mcpUniqueByToolAgg, toolLatencyAgg] = await Promise.all([
+            Message.aggregate([
+                {
+                    $match: {
+                        createdAt: { $gte: thirtyDaysAgo },
+                        'content.type': 'tool_call',
+                    },
+                },
+                { $unwind: '$content' },
+                { $match: { 'content.type': 'tool_call' } },
+                {
+                    $addFields: {
+                        toolName: {
+                            $ifNull: [
+                                '$content.tool_call.name',
+                                { $ifNull: ['$content.tool_call.function.name', 'unknown'] },
+                            ],
+                        },
+                    },
+                },
+                { $match: { toolName: { $regex: '_mcp_' } } },
+                {
+                    $addFields: {
+                        userObjectId: {
+                            $convert: {
+                                input: '$user',
+                                to: 'objectId',
+                                onError: null,
+                                onNull: null,
+                            },
+                        },
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userObjectId',
+                        foreignField: '_id',
+                        as: 'u',
+                    },
+                },
+                { $unwind: { path: '$u', preserveNullAndEmptyArrays: true } },
+                {
+                    $group: {
+                        _id: {
+                            toolId: '$toolName',
+                            email: '$u.email',
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+            Message.aggregate([
+                {
+                    $match: {
+                        createdAt: { $gte: thirtyDaysAgo },
+                        'content.type': 'tool_call',
+                    },
+                },
+                { $unwind: '$content' },
+                { $match: { 'content.type': 'tool_call' } },
+                {
+                    $addFields: {
+                        toolName: {
+                            $ifNull: [
+                                '$content.tool_call.name',
+                                { $ifNull: ['$content.tool_call.function.name', 'unknown'] },
+                            ],
+                        },
+                    },
+                },
+                { $match: { toolName: { $regex: '_mcp_' } } },
+                { $group: { _id: { tool: '$toolName', user: '$user' } } },
+                { $group: { _id: '$_id.tool', users: { $sum: 1 } } },
+            ]),
+            ToolCall.aggregate([
+                {
+                    $project: {
+                        toolId: 1,
+                        latencyMs: { $subtract: ['$updatedAt', '$createdAt'] },
+                    },
+                },
+                {
+                    $group: {
+                        _id: '$toolId',
+                        avgLatencyMs: { $avg: '$latencyMs' },
+                    },
+                },
+            ]),
+        ]);
+
+        advancedGauges.mcpToolCallByUserDomain30d.reset();
+        const mcpDomainAcc: Map<string, number> = new Map();
+        for (const row of mcpByToolDomainAgg) {
+            const toolId: string = row._id?.toolId || 'unknown';
+            const email: string = row._id?.email || 'unknown';
+            const email_domain = email.includes('@') ? email.split('@')[1] : 'unknown';
+            const key = `${toolId}\u0000${email_domain}`;
+            mcpDomainAcc.set(key, (mcpDomainAcc.get(key) || 0) + row.count);
+        }
+        for (const [key, count] of mcpDomainAcc.entries()) {
+            const [toolId, email_domain] = key.split('\u0000');
+            advancedGauges.mcpToolCallByUserDomain30d.set(
+                { toolId, email_domain },
+                count,
+            );
+        }
+        advancedGauges.mcpUniqueUsersByTool30d.reset();
+        for (const row of mcpUniqueByToolAgg) {
+            advancedGauges.mcpUniqueUsersByTool30d.set(
+                { toolId: row._id },
+                row.users,
+            );
+        }
+        advancedGauges.toolCallAvgLatencySeconds.reset();
+        for (const row of toolLatencyAgg) {
+            const ms: number = row.avgLatencyMs || 0;
+            advancedGauges.toolCallAvgLatencySeconds.set(
+                { toolId: row._id || 'unknown' },
+                ms / 1000,
+            );
+        }
+
+        // --- Files: by type, by domain, recent uploads, size percentiles ---
+        const [
+            fileTypeAgg,
+            fileByDomainAgg,
+            fileUploads24h,
+            fileUploads7d,
+            fileSizePercAgg,
+        ] = await Promise.all([
+            File.aggregate([
+                { $group: { _id: '$type', count: { $sum: 1 } } },
+            ]),
+            File.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'user',
+                        foreignField: '_id',
+                        as: 'u',
+                    },
+                },
+                { $unwind: { path: '$u', preserveNullAndEmptyArrays: true } },
+                {
+                    $group: {
+                        _id: '$u.email',
+                        totalBytes: { $sum: '$bytes' },
+                    },
+                },
+            ]),
+            File.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+            File.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+            File.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        p: {
+                            $percentile: {
+                                p: [0.5, 0.95],
+                                input: '$bytes',
+                                method: 'approximate',
+                            },
+                        },
+                    },
+                },
+            ]).catch(() => [] as Array<{ p: number[] }>),
+        ]);
+
+        advancedGauges.fileCountByType.reset();
+        for (const row of fileTypeAgg) {
+            advancedGauges.fileCountByType.set(
+                { type: row._id || 'unknown' },
+                row.count,
+            );
+        }
+        advancedGauges.fileBytesByUserDomain.reset();
+        const fileBytesByDomainMap: Map<string, number> = new Map();
+        for (const row of fileByDomainAgg) {
+            const email: string | null = row._id;
+            const domain = email && email.includes('@') ? email.split('@')[1] : 'unknown';
+            fileBytesByDomainMap.set(
+                domain,
+                (fileBytesByDomainMap.get(domain) || 0) + row.totalBytes,
+            );
+        }
+        for (const [email_domain, bytes] of fileBytesByDomainMap.entries()) {
+            advancedGauges.fileBytesByUserDomain.set({ email_domain }, bytes);
+        }
+        advancedGauges.fileUploadCount24h.set(fileUploads24h);
+        advancedGauges.fileUploadCount7d.set(fileUploads7d);
+        const fileSizeP = fileSizePercAgg[0]?.p as number[] | undefined;
+        advancedGauges.fileSizeP50.set(fileSizeP?.[0] || 0);
+        advancedGauges.fileSizeP95.set(fileSizeP?.[1] || 0);
+
+        // --- Feedback extensions: by tag-only and by domain (30d) ---
+        const [feedbackByTagOnlyAgg, feedbackByDomain30dAgg] = await Promise.all([
+            Message.aggregate([
+                { $match: { 'feedback.rating': { $in: ['thumbsUp', 'thumbsDown'] } } },
+                {
+                    $group: {
+                        _id: {
+                            tag: { $ifNull: ['$feedback.tag', 'no_tag'] },
+                            rating: '$feedback.rating',
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+            Message.aggregate([
+                {
+                    $match: {
+                        createdAt: { $gte: thirtyDaysAgo },
+                        'feedback.rating': { $in: ['thumbsUp', 'thumbsDown'] },
+                    },
+                },
+                {
+                    $addFields: {
+                        userObjectId: {
+                            $convert: {
+                                input: '$user',
+                                to: 'objectId',
+                                onError: null,
+                                onNull: null,
+                            },
+                        },
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userObjectId',
+                        foreignField: '_id',
+                        as: 'u',
+                    },
+                },
+                { $unwind: { path: '$u', preserveNullAndEmptyArrays: true } },
+                {
+                    $group: {
+                        _id: {
+                            email: '$u.email',
+                            rating: '$feedback.rating',
+                        },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]),
+        ]);
+
+        advancedGauges.feedbackCountByTag.reset();
+        for (const row of feedbackByTagOnlyAgg) {
+            advancedGauges.feedbackCountByTag.set(
+                {
+                    tag: row._id?.tag || 'no_tag',
+                    rating: row._id?.rating || 'unknown',
+                },
+                row.count,
+            );
+        }
+        advancedGauges.feedbackCountByDomain30d.reset();
+        const feedbackDomainAcc: Map<string, number> = new Map();
+        for (const row of feedbackByDomain30dAgg) {
+            const email: string | null = row._id?.email;
+            const rating: string = row._id?.rating || 'unknown';
+            const domain = email && email.includes('@') ? email.split('@')[1] : 'unknown';
+            const key = `${domain}\u0000${rating}`;
+            feedbackDomainAcc.set(key, (feedbackDomainAcc.get(key) || 0) + row.count);
+        }
+        for (const [key, count] of feedbackDomainAcc.entries()) {
+            const [email_domain, rating] = key.split('\u0000');
+            advancedGauges.feedbackCountByDomain30d.set(
+                { email_domain, rating },
+                count,
+            );
+        }
+
+        // --- Sessions & auth ---
+        const [
+            sessionActive,
+            sessionExpired24h,
+            verifiedCount,
+            userRoleAgg,
+        ] = await Promise.all([
+            Session.countDocuments({ expiration: { $gt: now } }),
+            Session.countDocuments({
+                expiration: { $gte: oneDayAgo, $lte: now },
+            }),
+            User.countDocuments({ emailVerified: true }),
+            User.aggregate([
+                { $group: { _id: '$role', count: { $sum: 1 } } },
+            ]),
+        ]);
+        advancedGauges.sessionActiveCount.set(sessionActive);
+        advancedGauges.sessionExpiredCount24h.set(sessionExpired24h);
+        advancedGauges.userEmailVerifiedPercent.set(
+            toPercent(verifiedCount, totalUserCount),
+        );
+        advancedGauges.userCountByRole.reset();
+        for (const row of userRoleAgg) {
+            advancedGauges.userCountByRole.set(
+                { role: row._id || 'unknown' },
+                row.count,
+            );
+        }
+
+        // --- Prompts library, shared links, conversation tags ---
+        const [promptGroupByCategoryAgg, sharedLinks24h, convTagUsageAgg] = await Promise.all([
+            PromptGroup.aggregate([
+                { $group: { _id: '$category', count: { $sum: 1 } } },
+            ]),
+            SharedLink.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+            ConversationTag.aggregate([
+                {
+                    $group: {
+                        _id: '$tag',
+                        total: { $sum: { $ifNull: ['$count', 0] } },
+                    },
+                },
+            ]),
+        ]);
+        advancedGauges.promptGroupCountByCategory.reset();
+        for (const row of promptGroupByCategoryAgg) {
+            advancedGauges.promptGroupCountByCategory.set(
+                { category: row._id || 'uncategorized' },
+                row.count,
+            );
+        }
+        advancedGauges.sharedLinkCount24h.set(sharedLinks24h);
+        advancedGauges.conversationTagUsageCount.reset();
+        for (const row of convTagUsageAgg) {
+            advancedGauges.conversationTagUsageCount.set(
+                { tag: row._id || 'untagged' },
+                row.total,
+            );
+        }
 
         console.log('Advanced metrics updated.');
     } catch (error) {
