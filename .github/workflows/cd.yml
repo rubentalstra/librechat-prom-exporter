@@ -8,7 +8,7 @@ permissions:
   contents: read
   packages: write
   id-token: write # cosign keyless signing via Sigstore
-  attestations: write # GitHub-native build attestations
+  security-events: write # upload-sarif posts to Code Scanning
 
 jobs:
   build:
@@ -21,16 +21,38 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       # docker/metadata-action handles latest / version-tag / branch logic
-      # automatically — no more bash heredocs.
+      # automatically — no more bash heredocs. It also generates OCI labels
+      # AND annotations; annotations are required for multi-arch images on
+      # GHCR to display description / source link / license in the UI.
+      # See: https://docs.github.com/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
       - name: Compute image metadata
         id: meta
         uses: docker/metadata-action@v6
+        env:
+          # Apply annotations to the manifest index (the "fat manifest"
+          # that groups linux/amd64 + linux/arm64). GHCR reads this index
+          # for the package page; without it, description shows as blank.
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: index,manifest
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.title=librechat-prom-exporter
+            org.opencontainers.image.description=Prometheus exporter for LibreChat metrics — connects to a LibreChat MongoDB and exposes user, message, conversation, transaction, and cost metrics on /metrics.
+            org.opencontainers.image.vendor=Ruben Talstra
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}#readme
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+          annotations: |
+            org.opencontainers.image.title=librechat-prom-exporter
+            org.opencontainers.image.description=Prometheus exporter for LibreChat metrics — connects to a LibreChat MongoDB and exposes user, message, conversation, transaction, and cost metrics on /metrics.
+            org.opencontainers.image.vendor=Ruben Talstra
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}#readme
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -39,8 +61,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Single multi-arch build + push. Buildx emits SLSA provenance and
-      # SBOM attestations into the registry automatically.
+      # Single multi-arch build + push.
+      # provenance + sbom are intentionally DISABLED here:
+      #   - they each publish an extra OCI manifest into GHCR ("version"
+      #     entries in the Packages UI) that duplicates work we already do
+      #     via `cosign sign` (signature) and `anchore/sbom-action` (SPDX
+      #     SBOM uploaded as a release artifact).
+      #   - dropping them keeps the registry surface to:
+      #       latest tag + 1 sig + amd64 manifest + arm64 manifest + index
+      #     per push, instead of ~7 entries with attestations on.
       - name: Build and push
         id: push
         uses: docker/build-push-action@v7
@@ -51,10 +80,11 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: true
-          sbom: true
+          provenance: false
+          sbom: false
 
       # Sign every published tag with Sigstore keyless cosign.
       # Verifiable downstream via:

@@ -45,6 +45,17 @@ RUN npm ci --omit=dev --ignore-scripts --prefer-offline --no-audit --silent && \
 #   - no shell; HEALTHCHECK must use array-form invoking node directly
 FROM cgr.dev/chainguard/node:latest AS runtime
 
+# OCI image metadata. The CD pipeline overrides these via
+# docker/metadata-action so the registry sees commit-pinned values; the
+# defaults here cover local `docker build` and any non-CI consumer.
+LABEL org.opencontainers.image.title="librechat-prom-exporter" \
+      org.opencontainers.image.description="Prometheus exporter for LibreChat metrics — connects to a LibreChat MongoDB and exposes user, message, conversation, transaction, and cost metrics on /metrics." \
+      org.opencontainers.image.vendor="Ruben Talstra" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/rubentalstra/librechat-prom-exporter" \
+      org.opencontainers.image.url="https://github.com/rubentalstra/librechat-prom-exporter" \
+      org.opencontainers.image.documentation="https://github.com/rubentalstra/librechat-prom-exporter#readme"
+
 WORKDIR /app
 
 COPY --from=builder --chown=65532:65532 /app/dist ./dist
