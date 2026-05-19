@@ -162,8 +162,12 @@ jobs:
       # of GHCR's OCI manifest list. Consumers verify with:
       #   gh attestation verify oci://ghcr.io/<repo>:latest \
       #     --owner <owner> --predicate-type=https://spdx.dev/Document
+      #
+      # actions/attest-sbom was deprecated in favor of the unified
+      # actions/attest action, which detects the SBOM format from the
+      # file passed via `sbom-path` (SPDX or CycloneDX).
       - name: Attest SBOM
-        uses: actions/attest-sbom@v4
+        uses: actions/attest@v4
         with:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.push.outputs.digest }}
