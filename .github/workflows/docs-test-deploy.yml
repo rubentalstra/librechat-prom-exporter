@@ -1,8 +1,8 @@
 name: Test docs build
 
-# PR-only verification: builds the Docusaurus site but doesn't deploy.
-# Catches broken markdown links, invalid frontmatter, and broken Mermaid
-# diagrams before they reach main.
+# PR-only docs build verification. onBrokenLinks / onBrokenAnchors /
+# onBrokenMarkdownLinks are all set to "throw" so this catches broken
+# refs and stale frontmatter at PR review, not after merge.
 
 on:
   pull_request:

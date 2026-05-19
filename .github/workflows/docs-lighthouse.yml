@@ -1,10 +1,6 @@
 name: Lighthouse on docs
 
-# PR-only Lighthouse run. Builds the Docusaurus site, runs Lighthouse
-# against the static build (served by treosh action's built-in server),
-# enforces a11y >= 90 and SEO >= 90 as errors; perf and best-practices
-# >= 85 as warnings. Posts the full report to a temporary public
-# storage and adds a comment with the link.
+# PR-only audit. Thresholds + URL list live in website/lighthouserc.json.
 
 on:
   pull_request:
