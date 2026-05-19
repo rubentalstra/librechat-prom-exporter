@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import { createModels } from '@librechat/data-schemas';
+import { createModels } from "@librechat/data-schemas";
+import mongoose from "mongoose";
 
 // Create all models using the data-schemas package
 const models = createModels(mongoose);

@@ -1,14 +1,15 @@
 /* eslint-disable no-unused-vars */
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import tsParser from '@typescript-eslint/parser';
+import { fileURLToPath } from 'node:url';
+
+import { fixupConfigRules, fixupPluginRules } from '@eslint/compat';
+import { FlatCompat } from '@eslint/eslintrc';
+import js from '@eslint/js';
 import typescriptEslintPlugin from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
 import jest from 'eslint-plugin-jest';
 import globals from 'globals';
-import js from '@eslint/js';
-import { FlatCompat } from '@eslint/eslintrc';
-import { fixupConfigRules, fixupPluginRules } from '@eslint/compat';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,11 +50,8 @@ export default [
                 '@typescript-eslint/parser': ['.ts'],
             },
             'import/resolver': {
-                typescript: {
-                    project: ['./tsconfig.json'],
-                },
                 node: {
-                    project: ['./tsconfig.json'],
+                    extensions: ['.ts', '.js'],
                 },
             },
         },
@@ -73,8 +71,22 @@ export default [
             'no-multiple-empty-lines': ['error', { max: 1 }],
             'no-trailing-spaces': 'error',
             'comma-dangle': ['error', 'always-multiline'],
-            // Allow console statements
-            'no-console': 'off',
+            'no-console': 'error',
+            'import/order': [
+                'error',
+                {
+                    groups: [
+                        'builtin',
+                        'external',
+                        'internal',
+                        'parent',
+                        'sibling',
+                        'index',
+                    ],
+                    'newlines-between': 'always',
+                    alphabetize: { order: 'asc', caseInsensitive: true },
+                },
+            ],
         },
     },
     ...compat
@@ -90,12 +102,23 @@ export default [
         files: ['**/*.ts'],
         rules: {
             'no-unused-vars': 'off',
-            '@typescript-eslint/no-unused-vars': 'off',
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+            ],
             '@typescript-eslint/no-unused-expressions': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
             '@typescript-eslint/no-unnecessary-condition': 'off',
             '@typescript-eslint/strict-boolean-expressions': 'off',
             '@typescript-eslint/ban-ts-comment': 'off',
+        },
+    },
+    {
+        files: ['**/*.test.ts'],
+        rules: {
+            'no-console': 'off',
+            '@typescript-eslint/no-unused-vars': 'off',
+            'import/order': 'off',
         },
     },
 ];

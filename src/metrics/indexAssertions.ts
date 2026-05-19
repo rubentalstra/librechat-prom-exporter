@@ -1,4 +1,7 @@
 import mongoose from "mongoose";
+
+import { logger } from "../logger.js";
+
 import { advancedGauges } from "./advancedMetrics.js";
 
 const RECOMMENDED_INDEXES: ReadonlyArray<{
@@ -9,8 +12,7 @@ const RECOMMENDED_INDEXES: ReadonlyArray<{
   {
     collection: "messages",
     key: { model: 1 },
-    reason:
-      "agent message scans (model: /^agent_/), per-model error rate, byModelType facet",
+    reason: "agent message scans (model: /^agent_/), per-model error rate, byModelType facet",
   },
   {
     collection: "transactions",
@@ -59,10 +61,7 @@ const RECOMMENDED_INDEXES: ReadonlyArray<{
   },
 ];
 
-function keysMatch(
-  a: Record<string, unknown>,
-  b: Record<string, unknown>,
-): boolean {
+function keysMatch(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
   const ak = Object.keys(a);
   const bk = Object.keys(b);
   if (ak.length !== bk.length) {
@@ -77,9 +76,10 @@ function keysMatch(
 }
 
 export async function assertIndexes(): Promise<void> {
+  const log = logger();
   const db = mongoose.connection.db;
   if (!db) {
-    console.warn("[indexes] mongoose connection has no db; skipping check");
+    log.warn("mongoose connection has no db; skipping index check");
     return;
   }
   for (const rec of RECOMMENDED_INDEXES) {
@@ -88,20 +88,19 @@ export async function assertIndexes(): Promise<void> {
       const found = existing.some((ix) => keysMatch(ix.key, rec.key));
       if (!found) {
         const keyJson = JSON.stringify(rec.key);
-        console.warn(
-          `[indexes] missing recommended index on ${rec.collection}: ${keyJson} ` +
-            `(${rec.reason}). Create with: db.${rec.collection}.createIndex(${keyJson})`,
+        log.warn(
+          {
+            collection: rec.collection,
+            key: rec.key,
+            reason: rec.reason,
+            createIndex: `db.${rec.collection}.createIndex(${keyJson})`,
+          },
+          "missing recommended index",
         );
-        advancedGauges.exporterMissingIndexes.set(
-          { collection: rec.collection, key: keyJson },
-          1,
-        );
+        advancedGauges.exporterMissingIndexes.set({ collection: rec.collection, key: keyJson }, 1);
       }
     } catch (err) {
-      console.warn(
-        `[indexes] could not inspect ${rec.collection} indexes:`,
-        err,
-      );
+      log.warn({ collection: rec.collection, err }, "could not inspect collection indexes");
     }
   }
 }

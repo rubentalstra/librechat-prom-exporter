@@ -1,33 +1,24 @@
-import { updateBasicMetrics } from "./basicMetrics.js";
-import { updateAdvancedMetrics } from "./advancedMetrics.js";
-import { advancedGauges } from "./advancedMetrics.js";
-import { envFlag } from "./util.js";
+import { getConfig } from "../config.js";
+import { logger } from "../logger.js";
 
-const LOG_TIMINGS = envFlag("LOG_TIMINGS", false);
+import { advancedGauges, updateAdvancedMetrics } from "./advancedMetrics.js";
+import { updateBasicMetrics } from "./basicMetrics.js";
 
 async function timed(group: string, fn: () => Promise<void>): Promise<void> {
+  const log = logger();
   const start = Date.now();
   try {
     await fn();
     const durationSec = (Date.now() - start) / 1000;
-    advancedGauges.exporterScrapeDurationSeconds.set(
-      { metric_group: group },
-      durationSec,
-    );
-    advancedGauges.exporterLastSuccessfulScrapeTimestamp.set(
-      { metric_group: group },
-      Math.floor(Date.now() / 1000),
-    );
-    if (LOG_TIMINGS) {
-      console.log(`[timing] ${group} scrape took ${durationSec.toFixed(3)}s`);
+    advancedGauges.exporterScrapeDurationSeconds.set({ metric_group: group }, durationSec);
+    advancedGauges.exporterLastSuccessfulScrapeTimestamp.set({ metric_group: group }, Math.floor(Date.now() / 1000));
+    if (getConfig().LOG_TIMINGS) {
+      log.info({ group, durationSec }, `${group} scrape completed`);
     }
   } catch (err) {
     const durationSec = (Date.now() - start) / 1000;
     advancedGauges.exporterScrapeErrorsTotal.inc({ metric_group: group });
-    console.error(
-      `[timing] ${group} scrape FAILED after ${durationSec.toFixed(3)}s:`,
-      err,
-    );
+    log.error({ group, durationSec, err }, `${group} scrape failed`);
   }
 }
 
@@ -36,7 +27,7 @@ let advancedRunning = false;
 
 export async function updateBasicMetricsTimed(): Promise<void> {
   if (basicRunning) {
-    console.log("[timing] basic scrape still running, skipping this tick");
+    logger().warn("basic scrape still running, skipping this tick");
     return;
   }
   basicRunning = true;
@@ -49,7 +40,7 @@ export async function updateBasicMetricsTimed(): Promise<void> {
 
 export async function updateAdvancedMetricsTimed(): Promise<void> {
   if (advancedRunning) {
-    console.log("[timing] advanced scrape still running, skipping this tick");
+    logger().warn("advanced scrape still running, skipping this tick");
     return;
   }
   advancedRunning = true;
