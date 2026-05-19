@@ -6,13 +6,22 @@ const ORG = "rubentalstra";
 const REPO = "librechat-prom-exporter";
 const REPO_URL = `https://github.com/${ORG}/${REPO}`;
 
+// Lighthouse CI runs `npm run build` and serves the resulting `build/`
+// directly at `/` via lhci's built-in static server — it has no way to
+// mount under a sub-path. Setting LIGHTHOUSE_BUILD=true makes Docusaurus
+// emit a build with baseUrl "/" so internal links resolve under the
+// localhost server. Real deploys (CD pipeline, local dev) use the
+// GHCR-Pages-prefixed baseUrl.
+const isLighthouseBuild = process.env.LIGHTHOUSE_BUILD === "true";
+const baseUrl = isLighthouseBuild ? "/" : `/${REPO}/`;
+
 const config: Config = {
   title: "LibreChat Prometheus Exporter",
   tagline: "Prometheus metrics for your LibreChat MongoDB.",
   favicon: "img/favicon.svg",
 
   url: `https://${ORG}.github.io`,
-  baseUrl: `/${REPO}/`,
+  baseUrl,
 
   organizationName: ORG,
   projectName: REPO,

@@ -33,7 +33,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build (baseUrl=/ so lhci's static server can serve at root)
+        env:
+          LIGHTHOUSE_BUILD: "true"
         run: npm run build
 
       - name: Run Lighthouse

@@ -18,6 +18,10 @@ package-lock.json
 website/.docusaurus
 website/build
 
+# Lighthouse CI local run artifacts (lhci collect output).
+website/.lighthouseci
+**/.lighthouseci
+
 # Immutable release docs snapshots — frozen at the moment of release;
 # reformatting them retroactively would produce noisy diffs and break the
 # "same source for that version" invariant.
