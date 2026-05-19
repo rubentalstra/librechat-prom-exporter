@@ -11,6 +11,13 @@ import {
 } from "./metrics/index.js";
 import { envFlag } from "./metrics/util.js";
 import { assertIndexes } from "./metrics/indexAssertions.js";
+import { installTenantHooks } from "./metrics/tenantHooks.js";
+
+const TENANT_ID = process.env.TENANT_ID;
+if (TENANT_ID) {
+  installTenantHooks(TENANT_ID);
+  console.log(`Tenant scoping active: tenantId=${TENANT_ID}`);
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
