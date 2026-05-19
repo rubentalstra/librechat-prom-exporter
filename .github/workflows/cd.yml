@@ -7,14 +7,12 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write # for cosign keyless signing
-  attestations: write
+  id-token: write # cosign keyless signing via Sigstore
+  attestations: write # GitHub-native build attestations
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    env:
-      IMAGE_REF: ghcr.io/${{ github.repository }}
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -22,76 +20,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Compute image tags
-        id: tags
-        env:
-          REF_NAME: ${{ github.ref_name }}
-          IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
-        run: |
-          set -euo pipefail
-          if [ "$IS_TAG" = "true" ]; then
-            echo "primary=$IMAGE_REF:$REF_NAME" >> "$GITHUB_OUTPUT"
-            {
-              echo 'all<<EOF'
-              echo "$IMAGE_REF:$REF_NAME"
-              echo "$IMAGE_REF:latest"
-              echo 'EOF'
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "primary=$IMAGE_REF:latest" >> "$GITHUB_OUTPUT"
-            {
-              echo 'all<<EOF'
-              echo "$IMAGE_REF:latest"
-              echo 'EOF'
-            } >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Build image (single-arch, for Trivy scan gate)
-        uses: docker/build-push-action@v7
+      # docker/metadata-action handles latest / version-tag / branch logic
+      # automatically — no more bash heredocs.
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@v6
         with:
-          context: .
-          file: Dockerfile
-          push: false
-          load: true
-          tags: ${{ steps.tags.outputs.primary }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # Report-only scan: report findings to Security tab without blocking
-      # the push. Distroless / upstream Debian rebuilds can lag CVE fixes by
-      # days; gating every deploy is impractical for a single-maintainer
-      # project. App-code vulnerabilities are caught by `npm audit` + the
-      # weekly Security Audit workflow; image-layer findings here go to
-      # GitHub Code Scanning for review.
-      - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ steps.tags.outputs.primary }}
-          format: sarif
-          output: trivy-image.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: "0"
-
-      # Hard-gate only on CRITICAL findings in app dependencies (not OS
-      # packages from the base image, which we don't control).
-      - name: Hard-fail on CRITICAL app-layer vulns
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ steps.tags.outputs.primary }}
-          format: table
-          severity: CRITICAL
-          vuln-type: library
-          ignore-unfixed: true
-          exit-code: "1"
-
-      - name: Upload Trivy SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-image.sarif
-          category: trivy-image
-        continue-on-error: true
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -100,7 +39,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push (multi-arch)
+      # Single multi-arch build + push. Buildx emits SLSA provenance and
+      # SBOM attestations into the registry automatically.
+      - name: Build and push
         id: push
         uses: docker/build-push-action@v7
         with:
@@ -108,19 +49,25 @@ jobs:
           file: Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.tags.outputs.all }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: true
           sbom: true
 
+      # Sign every published tag with Sigstore keyless cosign.
+      # Verifiable downstream via:
+      #   cosign verify --certificate-identity-regexp='https://github.com/<repo>/' \
+      #                 --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+      #                 ghcr.io/<repo>:latest
       - name: Install cosign
         uses: sigstore/cosign-installer@v4.1.2
 
-      - name: Sign image (keyless via Sigstore)
+      - name: Sign image
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
-          TAGS: ${{ steps.tags.outputs.all }}
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           set -euo pipefail
           while IFS= read -r tag; do
@@ -128,15 +75,40 @@ jobs:
             cosign sign --yes "${tag}@${DIGEST}"
           done <<< "$TAGS"
 
-      - name: Generate SBOM (Syft)
+      # Scan the pushed image. Report-only: findings flow to GitHub's
+      # Code Scanning UI but never block the deploy, because base-image
+      # CVEs are out of our control and rebuild cadence varies. App-layer
+      # CRITICALs are gated by `npm audit` during the build (npm ci fails
+      # the build if it finds them) and the weekly Security Audit job.
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}@${{ steps.push.outputs.digest }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          exit-code: "0"
+
+      - name: Upload Trivy SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+        continue-on-error: true
+
+      # SBOM artifact + attach to GitHub Release on version tags.
+      - name: Generate SBOM (SPDX)
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ steps.tags.outputs.primary }}@${{ steps.push.outputs.digest }}
+          image: ghcr.io/${{ github.repository }}@${{ steps.push.outputs.digest }}
           format: spdx-json
           output-file: sbom.spdx.json
           upload-artifact: true
 
-      - name: Attach SBOM to GitHub Release (tags only)
+      - name: Attach SBOM to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:

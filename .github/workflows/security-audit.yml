@@ -26,7 +26,7 @@ jobs:
         run: npm audit --production --audit-level=high
 
       - name: (Optional) Scan for vulnerabilities with Snyk
-        uses: snyk/actions/node@master
+        uses: snyk/actions/node@v1
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
