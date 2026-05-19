@@ -14,8 +14,8 @@ import {
   SharedLink,
   Transaction,
   Action,
-} from "../models";
-import { envFlag, extractEmailDomain } from "./util";
+} from "../models/index.js";
+import { envFlag, extractEmailDomain } from "./util.js";
 
 // Per-user `email`-labeled metrics are unbounded in cardinality (one series
 // per user, retained by prom-client for the process lifetime). Default off
@@ -817,7 +817,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
           ],
         },
       },
-    ]);
+    ], { allowDiskUse: true });
 
     __mark("Message Metrics (run concurrently)");
 
@@ -1448,7 +1448,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
           count: 1,
         },
       },
-    ]);
+    ], { allowDiskUse: true });
 
     const agentDomainCounts: Map<string, number> = new Map();
     for (const row of agentUsageByUserAgg) {

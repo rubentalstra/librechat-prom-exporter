@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { advancedGauges } from "./advancedMetrics";
+import { advancedGauges } from "./advancedMetrics.js";
 
 const RECOMMENDED_INDEXES: ReadonlyArray<{
   collection: string;

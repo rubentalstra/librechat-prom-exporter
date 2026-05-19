@@ -1,7 +1,7 @@
-import { updateBasicMetrics } from "./basicMetrics";
-import { updateAdvancedMetrics } from "./advancedMetrics";
-import { advancedGauges } from "./advancedMetrics";
-import { envFlag } from "./util";
+import { updateBasicMetrics } from "./basicMetrics.js";
+import { updateAdvancedMetrics } from "./advancedMetrics.js";
+import { advancedGauges } from "./advancedMetrics.js";
+import { envFlag } from "./util.js";
 
 const LOG_TIMINGS = envFlag("LOG_TIMINGS", false);
 

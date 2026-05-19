@@ -2,15 +2,15 @@ import express, { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import client from "prom-client";
 import "dotenv/config";
-import { basicGauges } from "./metrics/basicMetrics";
-import { advancedGauges } from "./metrics/advancedMetrics";
+import { basicGauges } from "./metrics/basicMetrics.js";
+import { advancedGauges } from "./metrics/advancedMetrics.js";
 import {
   updateBasicMetricsTimed,
   updateAdvancedMetricsTimed,
   waitForIdle,
-} from "./metrics";
-import { envFlag } from "./metrics/util";
-import { assertIndexes } from "./metrics/indexAssertions";
+} from "./metrics/index.js";
+import { envFlag } from "./metrics/util.js";
+import { assertIndexes } from "./metrics/indexAssertions.js";
 
 const app = express();
 const port = process.env.PORT || 3000;

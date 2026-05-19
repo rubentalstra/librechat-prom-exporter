@@ -20,7 +20,7 @@ import {
   Token,
   ToolCall,
   Transaction,
-} from "../models";
+} from "../models/index.js";
 
 export const basicGauges = {
   users: new client.Gauge({
