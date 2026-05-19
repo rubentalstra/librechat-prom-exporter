@@ -11,7 +11,7 @@ All settings are read from environment variables at boot. The exporter uses [zod
 ## Core
 
 | Variable                    | Default                                          | Description                                                                                                                                                                                                                   |
-|-----------------------------|--------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MONGO_URI`                 | `mongodb://host.docker.internal:27017/librechat` | Connection string for your LibreChat MongoDB database.                                                                                                                                                                        |
 | `PORT`                      | `9087`                                           | The port on which the exporter runs and exposes `/metrics`.                                                                                                                                                                   |
 | `MONGO_POOL_SIZE`           | `50`                                             | `maxPoolSize` passed to `mongoose.connect`.                                                                                                                                                                                   |
@@ -22,14 +22,14 @@ All settings are read from environment variables at boot. The exporter uses [zod
 ## Cardinality and tenancy
 
 | Variable                | Default   | Description                                                                                                                                                                                 |
-|-------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ----------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `EMIT_PER_USER_METRICS` | `false`   | When `true`, emits three high-cardinality `email`-labeled metrics — one Prometheus series per user. **Off by default** to protect large deployments. See [Cardinality](#cardinality) below. |
 | `TENANT_ID`             | _(unset)_ | When set, installs mongoose schema hooks that scope every aggregate / find / count query to the named tenant. Leave unset on single-tenant LibreChat installs (the default).                |
 
 ## HTTP server hardening
 
 | Variable                | Default    | Description                                                                                                                                                                                                                    |
-|-------------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ----------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `METRICS_PORT`          | _(unset)_  | Optional second port for `/metrics` only. If set and different from `PORT`, `/metrics` binds there and `/health` stays on `PORT`. Useful for k8s sidecar / internal-only metrics scraping.                                     |
 | `TRUST_PROXY`           | `loopback` | Value passed to `app.set('trust proxy', ...)`. Set when running behind a reverse proxy so `req.ip` (and the IP allowlist) see real clients. Accepts `true`, `false`, a CIDR list, or `loopback` / `linklocal` / `uniquelocal`. |
 | `RATE_LIMIT_WINDOW_MS`  | `60000`    | Per-IP rate-limit window in ms.                                                                                                                                                                                                |
@@ -41,7 +41,7 @@ All settings are read from environment variables at boot. The exporter uses [zod
 See the [Auth reference](./auth) for the full guide. Summary:
 
 | Variable                         | Default       | Description                                                                                                                                            |
-|----------------------------------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `METRICS_BEARER_TOKEN`           | _(unset)_     | Static bearer token. If set, `/metrics` requires `Authorization: Bearer <token>`.                                                                      |
 | `METRICS_BASIC_AUTH_USER`        | _(unset)_     | HTTP Basic username. Must be set together with `METRICS_BASIC_AUTH_PASSWORD`.                                                                          |
 | `METRICS_BASIC_AUTH_PASSWORD`    | _(unset)_     | HTTP Basic password.                                                                                                                                   |

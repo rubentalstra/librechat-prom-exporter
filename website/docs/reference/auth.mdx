@@ -8,12 +8,12 @@ sidebar_position: 2
 
 `/metrics` is **publicly accessible by default**. The exporter ships with four optional auth methods that can be enabled via environment variables. Any combination is supported; the IP allowlist (if set) is enforced **in addition** to whichever token method authorizes the request.
 
-| Method | Enable with | Prometheus / Alloy scrape side |
-| --- | --- | --- |
-| Static bearer token | `METRICS_BEARER_TOKEN` | `authorization: { type: Bearer, credentials: <token> }` |
-| HTTP Basic | `METRICS_BASIC_AUTH_USER` + `METRICS_BASIC_AUTH_PASSWORD` | `basic_auth: { username, password }` |
-| OAuth2 / OIDC JWT | `METRICS_OAUTH2_{ISSUER,JWKS_URI,AUDIENCE,REQUIRED_SCOPES,ALGORITHMS}` | `oauth2: { client_id, client_secret, token_url, scopes }` |
-| IP allowlist | `METRICS_ALLOWED_IPS` (comma-separated CIDRs) | _(network-layer; no scrape-side config)_ |
+| Method              | Enable with                                                            | Prometheus / Alloy scrape side                            |
+| ------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
+| Static bearer token | `METRICS_BEARER_TOKEN`                                                 | `authorization: { type: Bearer, credentials: <token> }`   |
+| HTTP Basic          | `METRICS_BASIC_AUTH_USER` + `METRICS_BASIC_AUTH_PASSWORD`              | `basic_auth: { username, password }`                      |
+| OAuth2 / OIDC JWT   | `METRICS_OAUTH2_{ISSUER,JWKS_URI,AUDIENCE,REQUIRED_SCOPES,ALGORITHMS}` | `oauth2: { client_id, client_secret, token_url, scopes }` |
+| IP allowlist        | `METRICS_ALLOWED_IPS` (comma-separated CIDRs)                          | _(network-layer; no scrape-side config)_                  |
 
 If none of these env vars is set, `/metrics` stays open — current behavior, no breaking change.
 
@@ -30,38 +30,38 @@ If none of these env vars is set, `/metrics` stays open — current behavior, no
 
 ```yaml
 scrape_configs:
-  - job_name: 'librechat-exporter'
+  - job_name: "librechat-exporter"
     authorization:
       type: Bearer
       credentials: "your-shared-secret"
     static_configs:
-      - targets: ['exporter:9087']
+      - targets: ["exporter:9087"]
 ```
 
 ### HTTP Basic
 
 ```yaml
 scrape_configs:
-  - job_name: 'librechat-exporter'
+  - job_name: "librechat-exporter"
     basic_auth:
       username: prom
       password: "your-password"
     static_configs:
-      - targets: ['exporter:9087']
+      - targets: ["exporter:9087"]
 ```
 
 ### OAuth2 (client_credentials against your IdP)
 
 ```yaml
 scrape_configs:
-  - job_name: 'librechat-exporter'
+  - job_name: "librechat-exporter"
     oauth2:
       client_id: "prometheus"
       client_secret: "your-client-secret"
       token_url: "https://idp.example.com/realms/main/protocol/openid-connect/token"
       scopes: ["metrics:read"]
     static_configs:
-      - targets: ['exporter:9087']
+      - targets: ["exporter:9087"]
 ```
 
 The exporter side is then configured with:

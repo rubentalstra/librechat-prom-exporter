@@ -1,4 +1,4 @@
-import {JSX} from "react";
+import { JSX } from "react";
 import { Redirect } from "@docusaurus/router";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 

@@ -14,12 +14,12 @@ This page assumes you've read [Architecture](./architecture) — especially the 
 
 ## 1. Decide the tier
 
-| Question | Tier |
-| --- | --- |
-| Is it a single `countDocuments` with no `$match`? | **Basic** (`src/metrics/basicMetrics.ts`) |
-| Is it a `countDocuments` with a small `$match` (e.g. `{ error: true }`)? | Either — basic if the filter is index-served and the count matters every 30 s; advanced otherwise |
-| Does it use `aggregate(...)`, `$facet`, `distinct`, `find().lean()` and group in JS? | **Advanced** (`src/metrics/advancedMetrics.ts`) |
-| Does it reference data the advanced scrape has already loaded (`userIdToEmail`, `convIdToAgentId`)? | **Advanced**, after the map load |
+| Question                                                                                            | Tier                                                                                              |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Is it a single `countDocuments` with no `$match`?                                                   | **Basic** (`src/metrics/basicMetrics.ts`)                                                         |
+| Is it a `countDocuments` with a small `$match` (e.g. `{ error: true }`)?                            | Either — basic if the filter is index-served and the count matters every 30 s; advanced otherwise |
+| Does it use `aggregate(...)`, `$facet`, `distinct`, `find().lean()` and group in JS?                | **Advanced** (`src/metrics/advancedMetrics.ts`)                                                   |
+| Does it reference data the advanced scrape has already loaded (`userIdToEmail`, `convIdToAgentId`)? | **Advanced**, after the map load                                                                  |
 
 When in doubt, go advanced — the advanced scrape's 5-min cadence is the right place for anything that can't complete in well under a second.
 
@@ -27,13 +27,13 @@ When in doubt, go advanced — the advanced scrape's 5-min cadence is the right 
 
 Every label adds a series per unique value. The budget rules:
 
-| Label values | Allowed? | Notes |
-| --- | --- | --- |
-| Bounded enums (`role`, `provider`, `tokenType`, `hour`, `weekday`) | ✅ always on | Effectively single-digit cardinality. |
-| Per-model / per-agent / per-tool | ✅ always on | A LibreChat install rarely has more than a few hundred. |
-| Per-email-domain | ✅ always on | Bounded by company domains in your user base. |
-| Per-user (`email`) | ❌ gated by `EMIT_PER_USER_METRICS` | Unbounded in user count. |
-| Per-message-ID / per-conversation-ID | ❌ never | Unbounded; would not fit in any Prometheus instance. |
+| Label values                                                       | Allowed?                            | Notes                                                   |
+| ------------------------------------------------------------------ | ----------------------------------- | ------------------------------------------------------- |
+| Bounded enums (`role`, `provider`, `tokenType`, `hour`, `weekday`) | ✅ always on                        | Effectively single-digit cardinality.                   |
+| Per-model / per-agent / per-tool                                   | ✅ always on                        | A LibreChat install rarely has more than a few hundred. |
+| Per-email-domain                                                   | ✅ always on                        | Bounded by company domains in your user base.           |
+| Per-user (`email`)                                                 | ❌ gated by `EMIT_PER_USER_METRICS` | Unbounded in user count.                                |
+| Per-message-ID / per-conversation-ID                               | ❌ never                            | Unbounded; would not fit in any Prometheus instance.    |
 
 If your metric needs an `email` label, you must:
 
@@ -92,7 +92,11 @@ __mark("My new section");
 
 const myAgg = await Message.aggregate(
   [
-    { $match: { /* filter */ } },
+    {
+      $match: {
+        /* filter */
+      },
+    },
     { $group: { _id: "$dimension", count: { $sum: 1 } } },
   ],
   { allowDiskUse: true }, // ← required for full-collection groups
