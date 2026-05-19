@@ -625,39 +625,24 @@ function toPercent(numerator: number, denominator: number): number {
   return denominator > 0 ? (numerator / denominator) * 100 : 0;
 }
 
-/**
- * Helper function to create aggregation pipeline for users by email domain
- * @param timeFilter - Date filter for createdAt field
- * @returns Array of aggregation pipeline stages
- */
-function getUsersByDomainPipeline(timeFilter: Date) {
+function getDistinctUsersPipeline(timeFilter: Date) {
   return [
     { $match: { createdAt: { $gte: timeFilter } } },
     { $group: { _id: "$user" } },
-    { $addFields: { userId: { $toObjectId: "$_id" } } },
-    {
-      $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        as: "userDetails",
-      },
-    },
-    { $unwind: "$userDetails" },
-    {
-      $project: {
-        emailDomain: { $arrayElemAt: [{ $split: ["$userDetails.email", "@"] }, 1] },
-      },
-    },
-    { $group: { _id: "$emailDomain", userCount: { $sum: 1 } } },
-    {
-      $project: {
-        _id: 0,
-        domain: "$_id",
-        count: "$userCount",
-      },
-    },
   ];
+}
+
+function bucketUserIdsByDomain(
+  rows: Array<{ _id: unknown }>,
+  userIdToEmail: Map<string, string>,
+): Array<{ domain: string; count: number }> {
+  const counts: Map<string, number> = new Map();
+  for (const row of rows) {
+    const email = userIdToEmail.get(String(row._id)) || "unknown";
+    const domain = extractEmailDomain(email);
+    counts.set(domain, (counts.get(domain) || 0) + 1);
+  }
+  return Array.from(counts.entries()).map(([domain, count]) => ({ domain, count }));
 }
 
 const LOG_TIMINGS = envFlag("LOG_TIMINGS", false);
@@ -832,8 +817,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
       thumbsUpByTagAgg,
       thumbsDownByTagAgg,
     ] = await Promise.all([
-      Message.aggregate([{ $group: { _id: null, total: { $sum: "$tokenCount" } } }]),
-      Message.aggregate([{ $group: { _id: null, avg: { $avg: "$tokenCount" } } }]),
+      Message.aggregate([{ $group: { _id: null, total: { $sum: "$tokenCount" } } }], { allowDiskUse: true }),
+      Message.aggregate([{ $group: { _id: null, avg: { $avg: "$tokenCount" } } }], { allowDiskUse: true }),
       Message.countDocuments({ error: true }),
       Message.countDocuments({ attachments: { $exists: true, $ne: [] } }),
       Message.countDocuments({}),
@@ -849,7 +834,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             count: { $sum: 1 },
           },
         },
-      ]),
+      ], { allowDiskUse: true }),
       Message.aggregate([
         { $match: { "feedback.rating": "thumbsDown" } },
         {
@@ -861,7 +846,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             count: { $sum: 1 },
           },
         },
-      ]),
+      ], { allowDiskUse: true }),
     ]);
 
     advancedGauges.messageTokenSum.set(tokenSumAgg[0]?.total || 0);
@@ -924,7 +909,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
           avgBytes: { $avg: "$bytes" },
         },
       },
-    ]);
+    ], { allowDiskUse: true });
     advancedGauges.fileTotalBytes.set(fileBytesAgg[0]?.totalBytes || 0);
     advancedGauges.fileAvgBytes.set(fileBytesAgg[0]?.avgBytes || 0);
 
@@ -943,15 +928,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
     __mark("User Count By Email Domain");
 
     // --- User Count By Email Domain ---
-    const users = await User.find(
-      { email: { $exists: true, $ne: null } },
-      { email: 1 },
-    );
     const domainCountMap: Map<string, number> = new Map();
-
-    for (const user of users) {
-      const email: string = user.email;
+    for (const email of userIdToEmail.values()) {
       const email_domain = extractEmailDomain(email);
+      if (email_domain === "unknown") {
+        continue;
+      }
       domainCountMap.set(
         email_domain,
         (domainCountMap.get(email_domain) || 0) + 1,
@@ -1068,30 +1050,30 @@ export async function updateAdvancedMetrics(): Promise<void> {
     const usersByDomainResults = await Message.aggregate([
       {
         $facet: {
-          // Active users in last 5 minutes by domain
-          active5min: getUsersByDomainPipeline(fiveMinutesAgo),
-          // Unique users in last 1 day by domain
-          unique1d: getUsersByDomainPipeline(oneDayAgo),
-          // Unique users in last 7 days by domain
-          unique7d: getUsersByDomainPipeline(sevenDaysAgo),
-          // Unique users in last 30 days by domain
-          unique30d: getUsersByDomainPipeline(thirtyDaysAgo),
+          active5min: getDistinctUsersPipeline(fiveMinutesAgo),
+          unique1d: getDistinctUsersPipeline(oneDayAgo),
+          unique7d: getDistinctUsersPipeline(sevenDaysAgo),
+          unique30d: getDistinctUsersPipeline(thirtyDaysAgo),
         },
       },
-    ]);
+    ], { allowDiskUse: true });
 
-    // Process results and set metrics
-    const [
-      activeUsersByDomainAgg,
-      uniqueUsers1dByDomainAgg,
-      uniqueUsers7dByDomainAgg,
-      uniqueUsers30dByDomainAgg,
-    ] = [
+    const activeUsersByDomainAgg = bucketUserIdsByDomain(
       usersByDomainResults[0]?.active5min || [],
+      userIdToEmail,
+    );
+    const uniqueUsers1dByDomainAgg = bucketUserIdsByDomain(
       usersByDomainResults[0]?.unique1d || [],
+      userIdToEmail,
+    );
+    const uniqueUsers7dByDomainAgg = bucketUserIdsByDomain(
       usersByDomainResults[0]?.unique7d || [],
+      userIdToEmail,
+    );
+    const uniqueUsers30dByDomainAgg = bucketUserIdsByDomain(
       usersByDomainResults[0]?.unique30d || [],
-    ];
+      userIdToEmail,
+    );
 
     advancedGauges.activeUserCountByDomain.reset();
     for (const result of activeUsersByDomainAgg) {
@@ -1205,7 +1187,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
           txnCount: { $sum: 1 },
         },
       },
-    ]);
+    ], { allowDiskUse: true });
     const tokensSum = tokenAgg[0]?.tokensSum || 0;
     const txnCount = tokenAgg[0]?.txnCount || 0;
     const tokenAvg = txnCount > 0 ? tokensSum / txnCount : 0;
@@ -1270,7 +1252,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
           ],
         },
       },
-    ]);
+    ], { allowDiskUse: true });
     const costByType = txnCostResults[0]?.costByType || [];
     const costByModel = txnCostResults[0]?.costByModel || [];
     const totalCost = txnCostResults[0]?.totalCost[0]?.totalCost || 0;
@@ -1365,7 +1347,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     const deployedModelsAgg = await Message.aggregate([
       { $match: { model: { $ne: null } } },
       { $group: { _id: "$model", count: { $sum: 1 } } },
-    ]);
+    ], { allowDiskUse: true });
     const agentIds = deployedModelsAgg.map(
       (result: {_id: string; count: number}) => result._id,
     );
@@ -1408,8 +1390,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- Agent usage broken down by user email and email domain ---
     const agentUsageByUserAgg: Array<{
-      agentId: string;
-      email: string | null;
+      _id: { model: string; user: string };
       count: number;
     }> = await Message.aggregate([
       { $match: { model: { $regex: /^agent_/ } } },
@@ -1419,44 +1400,16 @@ export async function updateAdvancedMetrics(): Promise<void> {
           count: { $sum: 1 },
         },
       },
-      {
-        $addFields: {
-          userObjectId: {
-            $convert: {
-              input: "$_id.user",
-              to: "objectId",
-              onError: null,
-              onNull: null,
-            },
-          },
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "userObjectId",
-          foreignField: "_id",
-          as: "userDetails",
-        },
-      },
-      { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          _id: 0,
-          agentId: "$_id.model",
-          email: "$userDetails.email",
-          count: 1,
-        },
-      },
     ], { allowDiskUse: true });
 
     const agentDomainCounts: Map<string, number> = new Map();
     for (const row of agentUsageByUserAgg) {
-      if (!agentMap.has(row.agentId)) {
+      const agentId = row._id.model;
+      if (!agentMap.has(agentId)) {
         continue;
       }
-      const agent = agentMap.get(row.agentId)!;
-      const email = row.email || "unknown";
+      const agent = agentMap.get(agentId)!;
+      const email = userIdToEmail.get(String(row._id.user)) || "unknown";
       const emailDomain = extractEmailDomain(email);
 
       if (EMIT_PER_USER_METRICS) {
@@ -1906,8 +1859,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
               cost: { $sum: "$costUSD" },
             },
           },
-        ]),
-        Conversation.estimatedDocumentCount(),
+        ], { allowDiskUse: true }),
+        Conversation.countDocuments({}),
       ],
     );
 
@@ -1994,7 +1947,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // --- Agents: unique users, last used, avg messages per use, creation by domain ---
     // Single $facet over messages matching agent models so the (potentially huge)
     // Message collection is scanned only once instead of 4 separate times.
-    const [agentFacetAgg, agentByAuthorAgg] = await Promise.all([
+    const [agentFacetAgg, agentAuthorDocs] = await Promise.all([
       Message.aggregate([
         { $match: { model: { $regex: /^agent_/ } } },
         {
@@ -2020,19 +1973,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
             ],
           },
         },
-      ]),
-      Agent.aggregate([
-        {
-          $lookup: {
-            from: "users",
-            localField: "author",
-            foreignField: "_id",
-            as: "u",
-          },
-        },
-        { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
-        { $group: { _id: "$u.email", count: { $sum: 1 } } },
-      ]),
+      ], { allowDiskUse: true }),
+      Agent.find({}, { author: 1 }).lean(),
     ]);
 
     const agentFacet = agentFacetAgg[0] || {
@@ -2081,13 +2023,10 @@ export async function updateAdvancedMetrics(): Promise<void> {
     }
     advancedGauges.agentCreationCountByDomain.reset();
     const agentByDomainMap: Map<string, number> = new Map();
-    for (const row of agentByAuthorAgg) {
-      const email: string | null = row._id;
+    for (const a of agentAuthorDocs) {
+      const email = userIdToEmail.get(String(a.author)) || "unknown";
       const domain = extractEmailDomain(email);
-      agentByDomainMap.set(
-        domain,
-        (agentByDomainMap.get(domain) || 0) + row.count,
-      );
+      agentByDomainMap.set(domain, (agentByDomainMap.get(domain) || 0) + 1);
     }
     for (const [email_domain, count] of agentByDomainMap.entries()) {
       advancedGauges.agentCreationCountByDomain.set({ email_domain }, count);
@@ -2119,36 +2058,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
           },
           { $match: { toolName: { $regex: "_mcp_" } } },
           {
-            $addFields: {
-              userObjectId: {
-                $convert: {
-                  input: "$user",
-                  to: "objectId",
-                  onError: null,
-                  onNull: null,
-                },
-              },
-            },
-          },
-          {
-            $lookup: {
-              from: "users",
-              localField: "userObjectId",
-              foreignField: "_id",
-              as: "u",
-            },
-          },
-          { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
-          {
             $group: {
-              _id: {
-                toolId: "$toolName",
-                email: "$u.email",
-              },
+              _id: { toolId: "$toolName", user: "$user" },
               count: { $sum: 1 },
             },
           },
-        ]),
+        ], { allowDiskUse: true }),
         Message.aggregate([
           {
             $match: {
@@ -2171,7 +2086,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
           { $match: { toolName: { $regex: "_mcp_" } } },
           { $group: { _id: { tool: "$toolName", user: "$user" } } },
           { $group: { _id: "$_id.tool", users: { $sum: 1 } } },
-        ]),
+        ], { allowDiskUse: true }),
         ToolCall.aggregate([
           {
             $project: {
@@ -2192,7 +2107,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     const mcpDomainAcc: Map<string, number> = new Map();
     for (const row of mcpByToolDomainAgg) {
       const toolId: string = row._id?.toolId || "unknown";
-      const email: string = row._id?.email || "unknown";
+      const email = userIdToEmail.get(String(row._id?.user)) || "unknown";
       const email_domain = extractEmailDomain(email);
       const key = `${toolId}\u0000${email_domain}`;
       mcpDomainAcc.set(key, (mcpDomainAcc.get(key) || 0) + row.count);
@@ -2229,22 +2144,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
     ] = await Promise.all([
       File.aggregate([{ $group: { _id: "$type", count: { $sum: 1 } } }]),
       File.aggregate([
-        {
-          $lookup: {
-            from: "users",
-            localField: "user",
-            foreignField: "_id",
-            as: "u",
-          },
-        },
-        { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
-        {
-          $group: {
-            _id: "$u.email",
-            totalBytes: { $sum: "$bytes" },
-          },
-        },
-      ]),
+        { $group: { _id: "$user", totalBytes: { $sum: "$bytes" } } },
+      ], { allowDiskUse: true }),
       File.countDocuments({ createdAt: { $gte: oneDayAgo } }),
       File.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
       File.aggregate([
@@ -2273,7 +2174,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.fileBytesByUserDomain.reset();
     const fileBytesByDomainMap: Map<string, number> = new Map();
     for (const row of fileByDomainAgg) {
-      const email: string | null = row._id;
+      const email = userIdToEmail.get(String(row._id)) || "unknown";
       const domain = extractEmailDomain(email);
       fileBytesByDomainMap.set(
         domain,
@@ -2313,36 +2214,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
           },
         },
         {
-          $addFields: {
-            userObjectId: {
-              $convert: {
-                input: "$user",
-                to: "objectId",
-                onError: null,
-                onNull: null,
-              },
-            },
-          },
-        },
-        {
-          $lookup: {
-            from: "users",
-            localField: "userObjectId",
-            foreignField: "_id",
-            as: "u",
-          },
-        },
-        { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
-        {
           $group: {
-            _id: {
-              email: "$u.email",
-              rating: "$feedback.rating",
-            },
+            _id: { user: "$user", rating: "$feedback.rating" },
             count: { $sum: 1 },
           },
         },
-      ]),
+      ], { allowDiskUse: true }),
     ]);
 
     advancedGauges.feedbackCountByTag.reset();
@@ -2358,7 +2235,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.feedbackCountByDomain30d.reset();
     const feedbackDomainAcc: Map<string, number> = new Map();
     for (const row of feedbackByDomain30dAgg) {
-      const email: string | null = row._id?.email;
+      const email = userIdToEmail.get(String(row._id?.user)) || "unknown";
       const rating: string = row._id?.rating || "unknown";
       const domain = extractEmailDomain(email);
       const key = `${domain}\u0000${rating}`;
