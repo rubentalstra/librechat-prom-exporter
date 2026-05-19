@@ -1,4 +1,6 @@
 import client from "prom-client";
+
+import { logger } from "../logger.js";
 import {
   User,
   Action,
@@ -174,6 +176,6 @@ export async function updateBasicMetrics(): Promise<void> {
     // basic scrape duration is reported via the [timing] log when
     // LOG_TIMINGS=true; no per-cycle "updated" line by default.
   } catch (error) {
-    console.error("Error updating basic metrics:", error);
+    logger().error({ err: error }, "error updating basic metrics");
   }
 }

@@ -1,29 +1,24 @@
 import { timingSafeEqual } from "crypto";
-import type { NextFunction, Request, RequestHandler, Response } from "express";
-import {
-  createRemoteJWKSet,
-  errors as joseErrors,
-  jwtVerify,
-  type JWTPayload,
-  type JWTVerifyGetKey,
-} from "jose";
-import ipaddr from "ipaddr.js";
 
-import { envFlag } from "../metrics/util.js";
+import type { NextFunction, Request, RequestHandler, Response } from "express";
+import ipaddr from "ipaddr.js";
+import { createRemoteJWKSet, errors as joseErrors, jwtVerify, type JWTPayload, type JWTVerifyGetKey } from "jose";
+
+import { logger } from "../logger.js";
 
 interface OAuth2Config {
   jwksUri: string;
-  issuer?: string;
+  issuer: string | undefined;
   audience: string;
   requiredScopes: string[];
   algorithms: string[];
 }
 
 interface ResolvedConfig {
-  bearerToken?: string;
-  basicHeader?: string;
-  oauth2?: OAuth2Config;
-  cidrs?: Array<[ipaddr.IPv4 | ipaddr.IPv6, number]>;
+  bearerToken: string | undefined;
+  basicHeader: string | undefined;
+  oauth2: OAuth2Config | undefined;
+  cidrs: Array<[ipaddr.IPv4 | ipaddr.IPv6, number]> | undefined;
   enabled: boolean;
 }
 
@@ -47,9 +42,7 @@ function splitScopes(value: string | undefined): string[] {
     .filter((s) => s.length > 0);
 }
 
-function parseCidrs(
-  csv: string | undefined,
-): Array<[ipaddr.IPv4 | ipaddr.IPv6, number]> | undefined {
+function parseCidrs(csv: string | undefined): Array<[ipaddr.IPv4 | ipaddr.IPv6, number]> | undefined {
   const items = splitCsv(csv);
   if (items.length === 0) {
     return undefined;
@@ -82,9 +75,7 @@ async function discoverJwksUri(issuer: string): Promise<string> {
   const url = issuer.replace(/\/$/, "") + "/.well-known/openid-configuration";
   const res = await fetch(url);
   if (!res.ok) {
-    throw new Error(
-      `OIDC discovery failed: GET ${url} -> ${res.status} ${res.statusText}`,
-    );
+    throw new Error(`OIDC discovery failed: GET ${url} -> ${res.status} ${res.statusText}`);
   }
   const body = (await res.json()) as { jwks_uri?: string };
   if (!body.jwks_uri || typeof body.jwks_uri !== "string") {
@@ -101,10 +92,7 @@ function clientIp(req: Request): string | null {
   return ip.replace(/^::ffff:/, "");
 }
 
-function ipMatches(
-  ip: string,
-  cidrs: Array<[ipaddr.IPv4 | ipaddr.IPv6, number]>,
-): boolean {
+function ipMatches(ip: string, cidrs: Array<[ipaddr.IPv4 | ipaddr.IPv6, number]>): boolean {
   let addr: ipaddr.IPv4 | ipaddr.IPv6;
   try {
     addr = ipaddr.parse(ip);
@@ -147,12 +135,9 @@ export async function buildMetricsAuth(): Promise<RequestHandler> {
   const basicUser = process.env.METRICS_BASIC_AUTH_USER;
   const basicPassword = process.env.METRICS_BASIC_AUTH_PASSWORD;
   if ((basicUser && !basicPassword) || (!basicUser && basicPassword)) {
-    throw new Error(
-      "METRICS_BASIC_AUTH_USER and METRICS_BASIC_AUTH_PASSWORD must both be set or both unset",
-    );
+    throw new Error("METRICS_BASIC_AUTH_USER and METRICS_BASIC_AUTH_PASSWORD must both be set or both unset");
   }
-  const basicHeader =
-    basicUser && basicPassword ? buildBasicHeader(basicUser, basicPassword) : undefined;
+  const basicHeader = basicUser && basicPassword ? buildBasicHeader(basicUser, basicPassword) : undefined;
 
   let oauth2: OAuth2Config | undefined;
   let jwks: JWTVerifyGetKey | undefined;
@@ -160,7 +145,10 @@ export async function buildMetricsAuth(): Promise<RequestHandler> {
   const issuer = process.env.METRICS_OAUTH2_ISSUER;
   let jwksUri = process.env.METRICS_OAUTH2_JWKS_URI;
 
-  const anyOauthEnv = audience || issuer || jwksUri ||
+  const anyOauthEnv =
+    audience ||
+    issuer ||
+    jwksUri ||
     process.env.METRICS_OAUTH2_REQUIRED_SCOPES ||
     process.env.METRICS_OAUTH2_ALGORITHMS;
 
@@ -182,9 +170,10 @@ export async function buildMetricsAuth(): Promise<RequestHandler> {
       issuer,
       audience,
       requiredScopes: splitScopes(process.env.METRICS_OAUTH2_REQUIRED_SCOPES),
-      algorithms: splitCsv(process.env.METRICS_OAUTH2_ALGORITHMS).length > 0
-        ? splitCsv(process.env.METRICS_OAUTH2_ALGORITHMS)
-        : ["RS256", "ES256"],
+      algorithms:
+        splitCsv(process.env.METRICS_OAUTH2_ALGORITHMS).length > 0
+          ? splitCsv(process.env.METRICS_OAUTH2_ALGORITHMS)
+          : ["RS256", "ES256"],
     };
     jwks = createRemoteJWKSet(new URL(oauth2.jwksUri), {
       cacheMaxAge: 10 * 60 * 1000,
@@ -203,7 +192,9 @@ export async function buildMetricsAuth(): Promise<RequestHandler> {
   };
 
   const hasTokenMethod = Boolean(bearerToken || basicHeader || oauth2);
-  const logRejects = envFlag("METRICS_AUTH_LOG_REJECTS", true);
+  const rawLogRejects = process.env.METRICS_AUTH_LOG_REJECTS?.trim().toLowerCase();
+  const logRejects = rawLogRejects === undefined || rawLogRejects === "" ? true : rawLogRejects === "true";
+  const log = logger();
   let lastLogAt = 0;
   const logReject = (req: Request, reason: string): void => {
     if (!logRejects) {
@@ -214,16 +205,18 @@ export async function buildMetricsAuth(): Promise<RequestHandler> {
       return;
     }
     lastLogAt = now;
-    console.warn(
-      `[metrics-auth] reject ${req.method} ${req.path} from ${clientIp(req) ?? "?"}: ${reason}`,
+    log.warn(
+      {
+        method: req.method,
+        path: req.path,
+        ip: clientIp(req) ?? null,
+        reason,
+      },
+      "metrics-auth reject",
     );
   };
 
-  return async function metricsAuth(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
+  return async function metricsAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
     if (!config.enabled) {
       next();
       return;
@@ -264,16 +257,17 @@ export async function buildMetricsAuth(): Promise<RequestHandler> {
 
       if (config.oauth2 && jwks) {
         try {
-          const { payload } = await jwtVerify(token, jwks, {
+          const verifyOptions: Parameters<typeof jwtVerify>[2] = {
             audience: config.oauth2.audience,
-            issuer: config.oauth2.issuer,
             algorithms: config.oauth2.algorithms,
-          });
+          };
+          if (config.oauth2.issuer !== undefined) {
+            verifyOptions.issuer = config.oauth2.issuer;
+          }
+          const { payload } = await jwtVerify(token, jwks, verifyOptions);
           if (config.oauth2.requiredScopes.length > 0) {
             const tokenScopes = extractScopes(payload);
-            const missing = config.oauth2.requiredScopes.filter(
-              (s) => !tokenScopes.includes(s),
-            );
+            const missing = config.oauth2.requiredScopes.filter((s) => !tokenScopes.includes(s));
             if (missing.length > 0) {
               logReject(req, `missing scopes: ${missing.join(",")}`);
               res
@@ -290,8 +284,7 @@ export async function buildMetricsAuth(): Promise<RequestHandler> {
           next();
           return;
         } catch (err) {
-          const code =
-            err instanceof joseErrors.JOSEError ? err.code : "invalid_token";
+          const code = err instanceof joseErrors.JOSEError ? err.code : "invalid_token";
           logReject(req, `oauth2 reject: ${code}`);
           res
             .status(401)
