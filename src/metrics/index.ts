@@ -1,6 +1,6 @@
-import {updateBasicMetrics} from "./basicMetrics";
-import {updateAdvancedMetrics} from "./advancedMetrics";
-import {advancedGauges} from "./advancedMetrics";
+import { updateBasicMetrics } from "./basicMetrics";
+import { updateAdvancedMetrics } from "./advancedMetrics";
+import { advancedGauges } from "./advancedMetrics";
 
 const LOG_TIMINGS = process.env.LOG_TIMINGS === "1";
 
@@ -10,11 +10,11 @@ async function timed(group: string, fn: () => Promise<void>): Promise<void> {
     await fn();
     const durationSec = (Date.now() - start) / 1000;
     advancedGauges.exporterScrapeDurationSeconds.set(
-      {metric_group: group},
+      { metric_group: group },
       durationSec,
     );
     advancedGauges.exporterLastSuccessfulScrapeTimestamp.set(
-      {metric_group: group},
+      { metric_group: group },
       Math.floor(Date.now() / 1000),
     );
     if (LOG_TIMINGS) {
@@ -22,7 +22,7 @@ async function timed(group: string, fn: () => Promise<void>): Promise<void> {
     }
   } catch (err) {
     const durationSec = (Date.now() - start) / 1000;
-    advancedGauges.exporterScrapeErrorsTotal.inc({metric_group: group});
+    advancedGauges.exporterScrapeErrorsTotal.inc({ metric_group: group });
     console.error(
       `[timing] ${group} scrape FAILED after ${durationSec.toFixed(3)}s:`,
       err,

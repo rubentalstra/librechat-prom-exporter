@@ -1,9 +1,9 @@
-import express, {Request, Response} from "express";
+import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import client from "prom-client";
 import "dotenv/config";
-import {basicGauges} from "./metrics/basicMetrics";
-import {advancedGauges} from "./metrics/advancedMetrics";
+import { basicGauges } from "./metrics/basicMetrics";
+import { advancedGauges } from "./metrics/advancedMetrics";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,7 +14,7 @@ const advancedRefreshInterval = parseInt(
 
 // Create a Prometheus registry and collect default metrics.
 const register = new client.Registry();
-client.collectDefaultMetrics({register});
+client.collectDefaultMetrics({ register });
 
 // Register basic gauges.
 for (const gauge of Object.values(basicGauges)) {
@@ -30,7 +30,7 @@ for (const gauge of Object.values(advancedGauges)) {
 const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/librechat";
 const mongoPoolSize = parseInt(process.env.MONGO_POOL_SIZE || "50");
 mongoose
-  .connect(mongoURI, {maxPoolSize: mongoPoolSize})
+  .connect(mongoURI, { maxPoolSize: mongoPoolSize })
   .then(() =>
     console.log(`Connected to MongoDB (maxPoolSize=${mongoPoolSize})`),
   )
@@ -39,7 +39,7 @@ mongoose
     process.exit(1);
   });
 
-import {updateBasicMetricsTimed, updateAdvancedMetricsTimed} from "./metrics";
+import { updateBasicMetricsTimed, updateAdvancedMetricsTimed } from "./metrics";
 // Schedule basic and advanced updates on independent intervals to avoid
 // advanced scrapes blocking the much cheaper basic ones.
 setInterval(updateBasicMetricsTimed, refreshInterval);

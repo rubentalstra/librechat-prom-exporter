@@ -610,9 +610,9 @@ function toPercent(numerator: number, denominator: number): number {
  */
 function getUsersByDomainPipeline(timeFilter: Date) {
   return [
-    {$match: {createdAt: {$gte: timeFilter}}},
-    {$group: {_id: "$user"}},
-    {$addFields: {userId: {$toObjectId: "$_id"}}},
+    { $match: { createdAt: { $gte: timeFilter } } },
+    { $group: { _id: "$user" } },
+    { $addFields: { userId: { $toObjectId: "$_id" } } },
     {
       $lookup: {
         from: "users",
@@ -621,13 +621,13 @@ function getUsersByDomainPipeline(timeFilter: Date) {
         as: "userDetails",
       },
     },
-    {$unwind: "$userDetails"},
+    { $unwind: "$userDetails" },
     {
       $project: {
-        emailDomain: {$arrayElemAt: [{$split: ["$userDetails.email", "@"]}, 1]},
+        emailDomain: { $arrayElemAt: [{ $split: ["$userDetails.email", "@"] }, 1] },
       },
     },
-    {$group: {_id: "$emailDomain", userCount: {$sum: 1}}},
+    { $group: { _id: "$emailDomain", userCount: { $sum: 1 } } },
     {
       $project: {
         _id: 0,
@@ -666,7 +666,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // Load users once and build an id->email map for in-JS joins (much faster
     // than re-running $lookup against `users` inside every aggregation).
-    const userDocs = await User.find({}, {email: 1}).lean();
+    const userDocs = await User.find({}, { email: 1 }).lean();
     const userIdToEmail: Map<string, string> = new Map();
     for (const u of userDocs) {
       if (u && u._id) {
@@ -678,8 +678,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // Load conversation->agent map once (only conversations with an agent_id)
     // so we can avoid a $lookup against `conversations` in the Cost section.
     const convDocs = await Conversation.find(
-      {agent_id: {$exists: true, $ne: null}},
-      {conversationId: 1, agent_id: 1},
+      { agent_id: { $exists: true, $ne: null } },
+      { conversationId: 1, agent_id: 1 },
     ).lean();
     const convIdToAgentId: Map<string, string> = new Map();
     for (const c of convDocs) {
@@ -694,27 +694,27 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // sections later await this same promise instead of re-scanning the
     // collection.
     const costPipelineProjectEarly = [
-      {$match: {model: {$nin: [null, "unknown", "UNKNOWN"]}}},
+      { $match: { model: { $nin: [null, "unknown", "UNKNOWN"] } } },
       {
         $project: {
           user: 1,
           conversationId: 1,
           createdAt: 1,
           model: 1,
-          tokenType: {$ifNull: ["$tokenType", "unknown"]},
+          tokenType: { $ifNull: ["$tokenType", "unknown"] },
           rawAmount: 1,
           tokenValue: {
             $cond: {
-              if: {$ifNull: ["$tokenValue", false]},
+              if: { $ifNull: ["$tokenValue", false] },
               then: "$tokenValue",
               else: {
-                $multiply: [{$abs: "$rawAmount"}, {$ifNull: ["$rate", 1]}],
+                $multiply: [{ $abs: "$rawAmount" }, { $ifNull: ["$rate", 1] }],
               },
             },
           },
         },
       },
-      {$addFields: {costUSD: {$divide: [{$abs: "$tokenValue"}, 1e6]}}},
+      { $addFields: { costUSD: { $divide: [{ $abs: "$tokenValue" }, 1e6] } } },
     ];
     const costCombinedAggPromise: Promise<
       Array<{
@@ -738,18 +738,18 @@ export async function updateAdvancedMetrics(): Promise<void> {
       {
         $facet: {
           c24h: [
-            {$match: {createdAt: {$gte: oneDayAgo}}},
-            {$group: {_id: null, total: {$sum: "$costUSD"}}},
+            { $match: { createdAt: { $gte: oneDayAgo } } },
+            { $group: { _id: null, total: { $sum: "$costUSD" } } },
           ],
           c7d: [
-            {$match: {createdAt: {$gte: sevenDaysAgo}}},
-            {$group: {_id: null, total: {$sum: "$costUSD"}}},
+            { $match: { createdAt: { $gte: sevenDaysAgo } } },
+            { $group: { _id: null, total: { $sum: "$costUSD" } } },
           ],
           c30d: [
-            {$match: {createdAt: {$gte: thirtyDaysAgo}}},
-            {$group: {_id: null, total: {$sum: "$costUSD"}}},
+            { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+            { $group: { _id: null, total: { $sum: "$costUSD" } } },
           ],
-          byUser: [{$group: {_id: "$user", cost: {$sum: "$costUSD"}}}],
+          byUser: [{ $group: { _id: "$user", cost: { $sum: "$costUSD" } } }],
           byModelType: [
             {
               $group: {
@@ -758,14 +758,14 @@ export async function updateAdvancedMetrics(): Promise<void> {
                   tokenType: "$tokenType",
                   conv: "$conversationId",
                 },
-                tokens: {$sum: {$abs: "$rawAmount"}},
+                tokens: { $sum: { $abs: "$rawAmount" } },
               },
             },
             {
               $group: {
-                _id: {model: "$_id.model", tokenType: "$_id.tokenType"},
-                tokens: {$sum: "$tokens"},
-                convs: {$sum: 1},
+                _id: { model: "$_id.model", tokenType: "$_id.tokenType" },
+                tokens: { $sum: "$tokens" },
+                convs: { $sum: 1 },
               },
             },
             {
@@ -786,7 +786,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
                   user: "$user",
                   tokenType: "$tokenType",
                 },
-                tokens: {$sum: {$abs: "$rawAmount"}},
+                tokens: { $sum: { $abs: "$rawAmount" } },
               },
             },
           ],
@@ -807,33 +807,33 @@ export async function updateAdvancedMetrics(): Promise<void> {
       thumbsUpByTagAgg,
       thumbsDownByTagAgg,
     ] = await Promise.all([
-      Message.aggregate([{$group: {_id: null, total: {$sum: "$tokenCount"}}}]),
-      Message.aggregate([{$group: {_id: null, avg: {$avg: "$tokenCount"}}}]),
-      Message.countDocuments({error: true}),
-      Message.countDocuments({attachments: {$exists: true, $ne: []}}),
+      Message.aggregate([{ $group: { _id: null, total: { $sum: "$tokenCount" } } }]),
+      Message.aggregate([{ $group: { _id: null, avg: { $avg: "$tokenCount" } } }]),
+      Message.countDocuments({ error: true }),
+      Message.countDocuments({ attachments: { $exists: true, $ne: [] } }),
       Message.countDocuments({}),
-      Message.countDocuments({plugin: {$exists: true, $ne: null}}),
+      Message.countDocuments({ plugin: { $exists: true, $ne: null } }),
       Message.aggregate([
-        {$match: {"feedback.rating": "thumbsUp"}},
+        { $match: { "feedback.rating": "thumbsUp" } },
         {
           $group: {
             _id: {
-              tag: {$ifNull: ["$feedback.tag", "no_tag"]},
-              model: {$ifNull: ["$model", "unknown"]},
+              tag: { $ifNull: ["$feedback.tag", "no_tag"] },
+              model: { $ifNull: ["$model", "unknown"] },
             },
-            count: {$sum: 1},
+            count: { $sum: 1 },
           },
         },
       ]),
       Message.aggregate([
-        {$match: {"feedback.rating": "thumbsDown"}},
+        { $match: { "feedback.rating": "thumbsDown" } },
         {
           $group: {
             _id: {
-              tag: {$ifNull: ["$feedback.tag", "no_tag"]},
-              model: {$ifNull: ["$model", "unknown"]},
+              tag: { $ifNull: ["$feedback.tag", "no_tag"] },
+              model: { $ifNull: ["$model", "unknown"] },
             },
-            count: {$sum: 1},
+            count: { $sum: 1 },
           },
         },
       ]),
@@ -864,7 +864,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       const tag: string = result._id?.tag || "no_tag";
       const model: string = result._id?.model || "unknown";
       advancedGauges.messageFeedbackThumbsUpCount.set(
-        {tag, model},
+        { tag, model },
         result.count,
       );
     }
@@ -874,7 +874,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       const tag: string = result._id?.tag || "no_tag";
       const model: string = result._id?.model || "unknown";
       advancedGauges.messageFeedbackThumbsDownCount.set(
-        {tag, model},
+        { tag, model },
         result.count,
       );
     }
@@ -883,8 +883,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- Banner Metrics ---
     const activeBanners = await Banner.countDocuments({
-      displayFrom: {$lte: now},
-      $or: [{displayTo: null}, {displayTo: {$gte: now}}],
+      displayFrom: { $lte: now },
+      $or: [{ displayTo: null }, { displayTo: { $gte: now } }],
     });
     advancedGauges.activeBannerCount.set(activeBanners);
 
@@ -895,8 +895,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
       {
         $group: {
           _id: null,
-          totalBytes: {$sum: "$bytes"},
-          avgBytes: {$avg: "$bytes"},
+          totalBytes: { $sum: "$bytes" },
+          avgBytes: { $avg: "$bytes" },
         },
       },
     ]);
@@ -907,20 +907,20 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- User Metrics ---
     const userProviderAgg = await User.aggregate([
-      {$group: {_id: "$provider", count: {$sum: 1}}},
+      { $group: { _id: "$provider", count: { $sum: 1 } } },
     ]);
     advancedGauges.userProviderCount.reset();
     for (const result of userProviderAgg) {
       const provider: string = result._id || "unknown";
-      advancedGauges.userProviderCount.set({provider}, result.count);
+      advancedGauges.userProviderCount.set({ provider }, result.count);
     }
 
     __mark("User Count By Email Domain");
 
     // --- User Count By Email Domain ---
     const users = await User.find(
-      {email: {$exists: true, $ne: null}},
-      {email: 1},
+      { email: { $exists: true, $ne: null } },
+      { email: 1 },
     );
     const domainCountMap: Map<string, number> = new Map();
 
@@ -935,16 +935,16 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     advancedGauges.userCountByDomain.reset();
     for (const [email_domain, count] of domainCountMap.entries()) {
-      advancedGauges.userCountByDomain.set({email_domain}, count);
+      advancedGauges.userCountByDomain.set({ email_domain }, count);
     }
 
     __mark("Active Users in Last 5 Minutes");
 
     // --- Active Users in Last 5 Minutes ---
     const activeUserAgg = await Message.aggregate([
-      {$match: {createdAt: {$gte: fiveMinutesAgo}}},
-      {$group: {_id: "$user"}},
-      {$count: "activeUsers"},
+      { $match: { createdAt: { $gte: fiveMinutesAgo } } },
+      { $group: { _id: "$user" } },
+      { $count: "activeUsers" },
     ]);
     const activeUsers: number =
       activeUserAgg.length > 0 ? activeUserAgg[0].activeUsers : 0;
@@ -963,13 +963,13 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- Unique Users in Sliding Windows (1, 7 and 30 days) ---
     const uniqueUsers1d = await Message.distinct("user", {
-      createdAt: {$gte: oneDayAgo},
+      createdAt: { $gte: oneDayAgo },
     });
     const uniqueUsers7d = await Message.distinct("user", {
-      createdAt: {$gte: sevenDaysAgo},
+      createdAt: { $gte: sevenDaysAgo },
     });
     const uniqueUsers30d = await Message.distinct("user", {
-      createdAt: {$gte: thirtyDaysAgo},
+      createdAt: { $gte: thirtyDaysAgo },
     });
 
     advancedGauges.uniqueUserCount1d.set(uniqueUsers1d.length);
@@ -999,32 +999,32 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // Monthly: % of registered users with 5+ active days in the last 30 days
     const [weeklyPeriodicityAgg, monthlyPeriodicityAgg] = await Promise.all([
       Message.aggregate([
-        {$match: {createdAt: {$gte: sevenDaysAgo}}},
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
         {
           $group: {
             _id: {
               user: "$user",
-              day: {$dateToString: {format: "%Y-%m-%d", date: "$createdAt"}},
+              day: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
             },
           },
         },
-        {$group: {_id: "$_id.user", activeDays: {$sum: 1}}},
-        {$match: {activeDays: {$gte: 3}}},
-        {$count: "count"},
+        { $group: { _id: "$_id.user", activeDays: { $sum: 1 } } },
+        { $match: { activeDays: { $gte: 3 } } },
+        { $count: "count" },
       ]),
       Message.aggregate([
-        {$match: {createdAt: {$gte: thirtyDaysAgo}}},
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
         {
           $group: {
             _id: {
               user: "$user",
-              day: {$dateToString: {format: "%Y-%m-%d", date: "$createdAt"}},
+              day: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
             },
           },
         },
-        {$group: {_id: "$_id.user", activeDays: {$sum: 1}}},
-        {$match: {activeDays: {$gte: 5}}},
-        {$count: "count"},
+        { $group: { _id: "$_id.user", activeDays: { $sum: 1 } } },
+        { $match: { activeDays: { $gte: 5 } } },
+        { $count: "count" },
       ]),
     ]);
 
@@ -1071,7 +1071,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.activeUserCountByDomain.reset();
     for (const result of activeUsersByDomainAgg) {
       advancedGauges.activeUserCountByDomain.set(
-        {email_domain: result.domain},
+        { email_domain: result.domain },
         result.count,
       );
     }
@@ -1079,7 +1079,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.uniqueUserCount1dByDomain.reset();
     for (const result of uniqueUsers1dByDomainAgg) {
       advancedGauges.uniqueUserCount1dByDomain.set(
-        {email_domain: result.domain},
+        { email_domain: result.domain },
         result.count,
       );
     }
@@ -1087,7 +1087,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.uniqueUserCount7dByDomain.reset();
     for (const result of uniqueUsers7dByDomainAgg) {
       advancedGauges.uniqueUserCount7dByDomain.set(
-        {email_domain: result.domain},
+        { email_domain: result.domain },
         result.count,
       );
     }
@@ -1095,7 +1095,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.uniqueUserCount30dByDomain.reset();
     for (const result of uniqueUsers30dByDomainAgg) {
       advancedGauges.uniqueUserCount30dByDomain.set(
-        {email_domain: result.domain},
+        { email_domain: result.domain },
         result.count,
       );
     }
@@ -1110,7 +1110,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.userPercentByDomain30d.reset();
     for (const result of uniqueUsers30dByDomainAgg) {
       advancedGauges.userPercentByDomain30d.set(
-        {email_domain: result.domain},
+        { email_domain: result.domain },
         toPercent(result.count, totalUniqueUsers30d),
       );
     }
@@ -1119,8 +1119,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- Session Metrics ---
     const sessionAgg = await Session.aggregate([
-      {$project: {duration: {$subtract: ["$expiration", "$createdAt"]}}},
-      {$group: {_id: null, avgDuration: {$avg: "$duration"}}},
+      { $project: { duration: { $subtract: ["$expiration", "$createdAt"] } } },
+      { $group: { _id: null, avgDuration: { $avg: "$duration" } } },
     ]);
     advancedGauges.sessionAvgDuration.set(
       (sessionAgg[0]?.avgDuration || 0) / 1000,
@@ -1130,7 +1130,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- Prompt Group Metrics ---
     const promptGroupAgg = await PromptGroup.aggregate([
-      {$group: {_id: null, avgGenerations: {$avg: "$numberOfGenerations"}}},
+      { $group: { _id: null, avgGenerations: { $avg: "$numberOfGenerations" } } },
     ]);
     advancedGauges.promptGroupGenerationsAvg.set(
       promptGroupAgg[0]?.avgGenerations || 0,
@@ -1140,32 +1140,32 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- Prompt Metrics ---
     const promptAgg = await Prompt.aggregate([
-      {$group: {_id: "$type", count: {$sum: 1}}},
+      { $group: { _id: "$type", count: { $sum: 1 } } },
     ]);
     advancedGauges.promptCountByType.reset();
     for (const result of promptAgg) {
       const type: string = result._id || "unknown";
-      advancedGauges.promptCountByType.set({type}, result.count);
+      advancedGauges.promptCountByType.set({ type }, result.count);
     }
 
     __mark("Tool Call Metrics");
 
     // --- Tool Call Metrics ---
     const toolCallAgg = await ToolCall.aggregate([
-      {$group: {_id: "$toolId", count: {$sum: 1}}},
+      { $group: { _id: "$toolId", count: { $sum: 1 } } },
     ]);
     advancedGauges.toolCallCountByTool.reset();
     for (const result of toolCallAgg) {
       const toolId: string = result._id || "unknown";
-      advancedGauges.toolCallCountByTool.set({toolId}, result.count);
+      advancedGauges.toolCallCountByTool.set({ toolId }, result.count);
     }
 
     __mark("Conversation Metrics");
 
     // --- Conversation Metrics ---
     const convAgg = await Conversation.aggregate([
-      {$project: {msgCount: {$size: "$messages"}}},
-      {$group: {_id: null, avgMessages: {$avg: "$msgCount"}}},
+      { $project: { msgCount: { $size: "$messages" } } },
+      { $group: { _id: null, avgMessages: { $avg: "$msgCount" } } },
     ]);
     advancedGauges.conversationMessageAvg.set(convAgg[0]?.avgMessages || 0);
 
@@ -1176,8 +1176,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
       {
         $group: {
           _id: null,
-          tokensSum: {$sum: {$abs: "$rawAmount"}},
-          txnCount: {$sum: 1},
+          tokensSum: { $sum: { $abs: "$rawAmount" } },
+          txnCount: { $sum: 1 },
         },
       },
     ]);
@@ -1194,35 +1194,35 @@ export async function updateAdvancedMetrics(): Promise<void> {
     const txnCostResults = await Transaction.aggregate([
       {
         $match: {
-          model: {$nin: [null, "unknown", "UNKNOWN"]},
+          model: { $nin: [null, "unknown", "UNKNOWN"] },
         },
       },
       {
         $project: {
-          tokenType: {$ifNull: ["$tokenType", "unknown"]},
+          tokenType: { $ifNull: ["$tokenType", "unknown"] },
           effectiveModel: "$model",
           rawAmount: 1,
-          rate: {$ifNull: ["$rate", 1]},
+          rate: { $ifNull: ["$rate", 1] },
           tokenValue: {
             $cond: {
-              if: {$ifNull: ["$tokenValue", false]},
+              if: { $ifNull: ["$tokenValue", false] },
               then: "$tokenValue",
               else: {
-                $multiply: [{$abs: "$rawAmount"}, {$ifNull: ["$rate", 1]}],
+                $multiply: [{ $abs: "$rawAmount" }, { $ifNull: ["$rate", 1] }],
               },
             },
           },
         },
       },
-      {$addFields: {costUSD: {$divide: [{$abs: "$tokenValue"}, 1e6]}}},
+      { $addFields: { costUSD: { $divide: [{ $abs: "$tokenValue" }, 1e6] } } },
       {
         $facet: {
           costByType: [
             {
               $group: {
                 _id: "$tokenType",
-                totalCost: {$sum: "$costUSD"},
-                count: {$sum: 1},
+                totalCost: { $sum: "$costUSD" },
+                count: { $sum: 1 },
               },
             },
           ],
@@ -1230,8 +1230,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
             {
               $group: {
                 _id: "$effectiveModel",
-                totalCost: {$sum: "$costUSD"},
-                count: {$sum: 1},
+                totalCost: { $sum: "$costUSD" },
+                count: { $sum: 1 },
               },
             },
           ],
@@ -1239,7 +1239,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
             {
               $group: {
                 _id: null,
-                totalCost: {$sum: "$costUSD"},
+                totalCost: { $sum: "$costUSD" },
               },
             },
           ],
@@ -1253,9 +1253,9 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.transactionCostSum.reset();
     advancedGauges.transactionCostAvg.reset();
     for (const ct of costByType) {
-      advancedGauges.transactionCostSum.set({tokenType: ct._id}, ct.totalCost);
+      advancedGauges.transactionCostSum.set({ tokenType: ct._id }, ct.totalCost);
       advancedGauges.transactionCostAvg.set(
-        {tokenType: ct._id},
+        { tokenType: ct._id },
         ct.count > 0 ? ct.totalCost / ct.count : 0,
       );
     }
@@ -1268,7 +1268,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // Cost per deployed model.
     advancedGauges.transactionCostPerModel.reset();
     for (const cm of costByModel) {
-      advancedGauges.transactionCostPerModel.set({model: cm._id}, cm.totalCost);
+      advancedGauges.transactionCostPerModel.set({ model: cm._id }, cm.totalCost);
     }
 
     __mark("Token usage per model per user / email domain");
@@ -1302,7 +1302,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       const emailDomain = email.includes("@") ? email.split("@")[1] : "unknown";
 
       advancedGauges.transactionTokenSumByModelUser.set(
-        {model: row.model, tokenType: row.tokenType, email},
+        { model: row.model, tokenType: row.tokenType, email },
         row.tokens,
       );
 
@@ -1315,7 +1315,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     for (const [key, tokens] of tokensByModelDomain.entries()) {
       const [model, tokenType, email_domain] = key.split("\u0000");
       advancedGauges.transactionTokenSumByModelDomain.set(
-        {model, tokenType, email_domain},
+        { model, tokenType, email_domain },
         tokens,
       );
     }
@@ -1324,25 +1324,25 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- Action Metrics ---
     const actionAgg = await Action.aggregate([
-      {$group: {_id: "$type", count: {$sum: 1}}},
+      { $group: { _id: "$type", count: { $sum: 1 } } },
     ]);
     advancedGauges.actionCountByType.reset();
     for (const result of actionAgg) {
       const type: string = result._id || "unknown";
-      advancedGauges.actionCountByType.set({type}, result.count);
+      advancedGauges.actionCountByType.set({ type }, result.count);
     }
 
     __mark("Deployed Models / Agents / Assistants Metrics");
 
     // --- Deployed Models / Agents / Assistants Metrics ---
     const deployedModelsAgg = await Message.aggregate([
-      {$match: {model: {$ne: null}}},
-      {$group: {_id: "$model", count: {$sum: 1}}},
+      { $match: { model: { $ne: null } } },
+      { $group: { _id: "$model", count: { $sum: 1 } } },
     ]);
     const agentIds = deployedModelsAgg.map(
       (result: {_id: string; count: number}) => result._id,
     );
-    const agents = await Agent.find({id: {$in: agentIds}});
+    const agents = await Agent.find({ id: { $in: agentIds } });
     const agentMap: Map<string, string> = new Map();
     agents.forEach((agent: {id: string; name?: string}) => {
       agentMap.set(agent.id, agent.name ? agent.name : agent.id);
@@ -1360,7 +1360,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         if (agentMap.has(id)) {
           const displayName = agentMap.get(id)!;
           advancedGauges.agentUsageCount.set(
-            {agent: displayName},
+            { agent: displayName },
             result.count,
           );
         }
@@ -1368,12 +1368,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
         if (agentMap.has(id)) {
           const displayName = agentMap.get(id)!;
           advancedGauges.assistantUsageCount.set(
-            {assistant: displayName},
+            { assistant: displayName },
             result.count,
           );
         }
       } else {
-        advancedGauges.deployedModelUsageCount.set({model: id}, result.count);
+        advancedGauges.deployedModelUsageCount.set({ model: id }, result.count);
       }
     }
 
@@ -1385,11 +1385,11 @@ export async function updateAdvancedMetrics(): Promise<void> {
       email: string | null;
       count: number;
     }> = await Message.aggregate([
-      {$match: {model: {$regex: /^agent_/}}},
+      { $match: { model: { $regex: /^agent_/ } } },
       {
         $group: {
-          _id: {model: "$model", user: "$user"},
-          count: {$sum: 1},
+          _id: { model: "$model", user: "$user" },
+          count: { $sum: 1 },
         },
       },
       {
@@ -1412,7 +1412,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
           as: "userDetails",
         },
       },
-      {$unwind: {path: "$userDetails", preserveNullAndEmptyArrays: true}},
+      { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
       {
         $project: {
           _id: 0,
@@ -1432,7 +1432,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       const email = row.email || "unknown";
       const emailDomain = email.includes("@") ? email.split("@")[1] : "unknown";
 
-      advancedGauges.agentUsageByUserCount.set({agent, email}, row.count);
+      advancedGauges.agentUsageByUserCount.set({ agent, email }, row.count);
 
       const domainKey = `${agent}|${emailDomain}`;
       agentDomainCounts.set(
@@ -1444,7 +1444,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       const sepIdx = key.indexOf("|");
       const agent = key.slice(0, sepIdx);
       const email_domain = key.slice(sepIdx + 1);
-      advancedGauges.agentUsageByDomainCount.set({agent, email_domain}, count);
+      advancedGauges.agentUsageByDomainCount.set({ agent, email_domain }, count);
     }
 
     __mark(
@@ -1458,21 +1458,21 @@ export async function updateAdvancedMetrics(): Promise<void> {
         Message.aggregate([
           {
             $match: {
-              createdAt: {$gte: thirtyDaysAgo},
-              model: {$ne: null},
+              createdAt: { $gte: thirtyDaysAgo },
+              model: { $ne: null },
               isCreatedByUser: false,
             },
           },
           {
             $group: {
               _id: "$model",
-              total: {$sum: 1},
+              total: { $sum: 1 },
               thumbsUp: {
-                $sum: {$cond: [{$eq: ["$feedback.rating", "thumbsUp"]}, 1, 0]},
+                $sum: { $cond: [{ $eq: ["$feedback.rating", "thumbsUp"] }, 1, 0] },
               },
               thumbsDown: {
                 $sum: {
-                  $cond: [{$eq: ["$feedback.rating", "thumbsDown"]}, 1, 0],
+                  $cond: [{ $eq: ["$feedback.rating", "thumbsDown"] }, 1, 0],
                 },
               },
             },
@@ -1480,44 +1480,44 @@ export async function updateAdvancedMetrics(): Promise<void> {
         ]),
         // Distinct deployed model names
         Message.aggregate([
-          {$match: {model: {$ne: null}}},
-          {$group: {_id: "$model"}},
+          { $match: { model: { $ne: null } } },
+          { $group: { _id: "$model" } },
         ]),
         // MCP tool call content (30d)
         Message.aggregate([
           {
             $match: {
-              createdAt: {$gte: thirtyDaysAgo},
+              createdAt: { $gte: thirtyDaysAgo },
               "content.type": "tool_call",
             },
           },
-          {$unwind: "$content"},
-          {$match: {"content.type": "tool_call"}},
+          { $unwind: "$content" },
+          { $match: { "content.type": "tool_call" } },
           {
             $addFields: {
               toolName: {
                 $ifNull: [
                   "$content.tool_call.name",
-                  {$ifNull: ["$content.tool_call.function.name", "unknown"]},
+                  { $ifNull: ["$content.tool_call.function.name", "unknown"] },
                 ],
               },
             },
           },
           {
             $facet: {
-              totalToolCalls: [{$count: "count"}],
+              totalToolCalls: [{ $count: "count" }],
               mcpTotal: [
-                {$match: {toolName: {$regex: "_mcp_"}}},
-                {$count: "count"},
+                { $match: { toolName: { $regex: "_mcp_" } } },
+                { $count: "count" },
               ],
               mcpByTool: [
-                {$match: {toolName: {$regex: "_mcp_"}}},
-                {$group: {_id: "$toolName", count: {$sum: 1}}},
+                { $match: { toolName: { $regex: "_mcp_" } } },
+                { $group: { _id: "$toolName", count: { $sum: 1 } } },
               ],
               mcpUniqueUsers: [
-                {$match: {toolName: {$regex: "_mcp_"}}},
-                {$group: {_id: "$user"}},
-                {$count: "count"},
+                { $match: { toolName: { $regex: "_mcp_" } } },
+                { $group: { _id: "$user" } },
+                { $count: "count" },
               ],
             },
           },
@@ -1559,15 +1559,15 @@ export async function updateAdvancedMetrics(): Promise<void> {
         case "agent": {
           const displayName = agentMap.get(id) || id;
           advancedGauges.feedbackThumbsUpPercentByAgent30d.set(
-            {agent: displayName},
+            { agent: displayName },
             upPct,
           );
           advancedGauges.feedbackThumbsDownPercentByAgent30d.set(
-            {agent: displayName},
+            { agent: displayName },
             downPct,
           );
           advancedGauges.netSatisfactionByAgent30d.set(
-            {agent: displayName},
+            { agent: displayName },
             netSatisfaction,
           );
           break;
@@ -1578,15 +1578,15 @@ export async function updateAdvancedMetrics(): Promise<void> {
         // had to be defaults as model have different naming conventions and we want to capture all models even if they don't follow a strict pattern
         default:
           advancedGauges.feedbackThumbsUpPercentByModel30d.set(
-            {model: id},
+            { model: id },
             upPct,
           );
           advancedGauges.feedbackThumbsDownPercentByModel30d.set(
-            {model: id},
+            { model: id },
             downPct,
           );
           advancedGauges.netSatisfactionByModel30d.set(
-            {model: id},
+            { model: id },
             netSatisfaction,
           );
           break;
@@ -1623,7 +1623,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.mcpToolCallCountByTool30d.reset();
     for (const result of mcpByTool) {
       advancedGauges.mcpToolCallCountByTool30d.set(
-        {toolId: result._id},
+        { toolId: result._id },
         result.count,
       );
     }
@@ -1654,32 +1654,32 @@ export async function updateAdvancedMetrics(): Promise<void> {
       registered30dPlus,
       powerUserAgg,
     ] = await Promise.all([
-      Message.countDocuments({createdAt: {$gte: oneDayAgo}}),
-      Message.countDocuments({createdAt: {$gte: sevenDaysAgo}}),
-      Message.countDocuments({createdAt: {$gte: thirtyDaysAgo}}),
+      Message.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+      Message.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      Message.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
       Message.aggregate([
-        {$match: {createdAt: {$gte: thirtyDaysAgo}}},
-        {$group: {_id: {$hour: "$createdAt"}, count: {$sum: 1}}},
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: { $hour: "$createdAt" }, count: { $sum: 1 } } },
       ]),
       Message.aggregate([
-        {$match: {createdAt: {$gte: thirtyDaysAgo}}},
-        {$group: {_id: {$dayOfWeek: "$createdAt"}, count: {$sum: 1}}},
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: { $dayOfWeek: "$createdAt" }, count: { $sum: 1 } } },
       ]),
-      User.countDocuments({createdAt: {$gte: thirtyDaysAgo}}),
-      Conversation.countDocuments({createdAt: {$gte: oneDayAgo}}),
-      Conversation.countDocuments({createdAt: {$gte: sevenDaysAgo}}),
-      Conversation.countDocuments({createdAt: {$gte: thirtyDaysAgo}}),
-      User.countDocuments({createdAt: {$lte: sevenDaysAgo}}),
-      User.countDocuments({createdAt: {$lte: thirtyDaysAgo}}),
+      User.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      Conversation.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+      Conversation.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
+      Conversation.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      User.countDocuments({ createdAt: { $lte: sevenDaysAgo } }),
+      User.countDocuments({ createdAt: { $lte: thirtyDaysAgo } }),
       Message.aggregate([
-        {$match: {createdAt: {$gte: thirtyDaysAgo}}},
-        {$group: {_id: "$user", msgCount: {$sum: 1}}},
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: "$user", msgCount: { $sum: 1 } } },
         {
           $bucket: {
             groupBy: "$msgCount",
             boundaries: [1, 10, 50, Number.MAX_SAFE_INTEGER],
             default: "other",
-            output: {count: {$sum: 1}},
+            output: { count: { $sum: 1 } },
           },
         },
       ]),
@@ -1695,22 +1695,22 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     advancedGauges.messagesByHourOfDay.reset();
     for (let h = 0; h < 24; h++) {
-      advancedGauges.messagesByHourOfDay.set({hour: String(h)}, 0);
+      advancedGauges.messagesByHourOfDay.set({ hour: String(h) }, 0);
     }
     for (const row of msgByHourAgg) {
       advancedGauges.messagesByHourOfDay.set(
-        {hour: String(row._id)},
+        { hour: String(row._id) },
         row.count,
       );
     }
 
     advancedGauges.messagesByWeekday.reset();
     for (let w = 1; w <= 7; w++) {
-      advancedGauges.messagesByWeekday.set({weekday: String(w)}, 0);
+      advancedGauges.messagesByWeekday.set({ weekday: String(w) }, 0);
     }
     for (const row of msgByWeekdayAgg) {
       advancedGauges.messagesByWeekday.set(
-        {weekday: String(row._id)},
+        { weekday: String(row._id) },
         row.count,
       );
     }
@@ -1737,7 +1737,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     };
     for (const row of powerUserAgg) {
       const tier = tierLabels[String(row._id)] || "other";
-      advancedGauges.powerUsersCount30d.set({tier}, row.count);
+      advancedGauges.powerUsersCount30d.set({ tier }, row.count);
     }
 
     __mark("Conversation quality (parallel)");
@@ -1751,7 +1751,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       err30dCount,
     ] = await Promise.all([
       Conversation.aggregate([
-        {$project: {msgCount: {$size: {$ifNull: ["$messages", []]}}}},
+        { $project: { msgCount: { $size: { $ifNull: ["$messages", []] } } } },
         {
           $group: {
             _id: null,
@@ -1769,40 +1769,40 @@ export async function updateAdvancedMetrics(): Promise<void> {
         {
           $group: {
             _id: "$conversationId",
-            firstAt: {$min: "$createdAt"},
-            lastAt: {$max: "$createdAt"},
+            firstAt: { $min: "$createdAt" },
+            lastAt: { $max: "$createdAt" },
           },
         },
         {
           $project: {
             durationSec: {
-              $divide: [{$subtract: ["$lastAt", "$firstAt"]}, 1000],
+              $divide: [{ $subtract: ["$lastAt", "$firstAt"] }, 1000],
             },
           },
         },
-        {$group: {_id: null, avg: {$avg: "$durationSec"}}},
+        { $group: { _id: null, avg: { $avg: "$durationSec" } } },
       ]),
-      Message.countDocuments({unfinished: true}),
+      Message.countDocuments({ unfinished: true }),
       Message.aggregate([
         {
           $match: {
-            model: {$ne: null},
-            createdAt: {$gte: thirtyDaysAgo},
+            model: { $ne: null },
+            createdAt: { $gte: thirtyDaysAgo },
           },
         },
         {
           $group: {
             _id: "$model",
-            total: {$sum: 1},
+            total: { $sum: 1 },
             errors: {
-              $sum: {$cond: [{$eq: ["$error", true]}, 1, 0]},
+              $sum: { $cond: [{ $eq: ["$error", true] }, 1, 0] },
             },
           },
         },
       ]),
       Message.countDocuments({
         error: true,
-        createdAt: {$gte: thirtyDaysAgo},
+        createdAt: { $gte: thirtyDaysAgo },
       }),
     ]);
 
@@ -1818,7 +1818,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.messageErrorRateByModel.reset();
     for (const row of errorByModelAgg) {
       advancedGauges.messageErrorRateByModel.set(
-        {model: row._id},
+        { model: row._id },
         toPercent(row.errors, row.total),
       );
     }
@@ -1830,27 +1830,27 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     // --- Cost: total per window + cost/conversation + per-domain/user/agent ---
     const costPipelineProject = [
-      {$match: {model: {$nin: [null, "unknown", "UNKNOWN"]}}},
+      { $match: { model: { $nin: [null, "unknown", "UNKNOWN"] } } },
       {
         $project: {
           user: 1,
           conversationId: 1,
           createdAt: 1,
           model: 1,
-          tokenType: {$ifNull: ["$tokenType", "unknown"]},
+          tokenType: { $ifNull: ["$tokenType", "unknown"] },
           rawAmount: 1,
           tokenValue: {
             $cond: {
-              if: {$ifNull: ["$tokenValue", false]},
+              if: { $ifNull: ["$tokenValue", false] },
               then: "$tokenValue",
               else: {
-                $multiply: [{$abs: "$rawAmount"}, {$ifNull: ["$rate", 1]}],
+                $multiply: [{ $abs: "$rawAmount" }, { $ifNull: ["$rate", 1] }],
               },
             },
           },
         },
       },
-      {$addFields: {costUSD: {$divide: [{$abs: "$tokenValue"}, 1e6]}}},
+      { $addFields: { costUSD: { $divide: [{ $abs: "$tokenValue" }, 1e6] } } },
     ];
 
     const [costCombinedAgg, costByAgentAgg, totalConvCount] = await Promise.all(
@@ -1874,7 +1874,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
           {
             $group: {
               _id: "$conversationId",
-              cost: {$sum: "$costUSD"},
+              cost: { $sum: "$costUSD" },
             },
           },
         ]),
@@ -1896,14 +1896,14 @@ export async function updateAdvancedMetrics(): Promise<void> {
     for (const row of costByDomainUserAgg) {
       const email = userIdToEmail.get(String(row._id)) || "unknown";
       const domain = email.includes("@") ? email.split("@")[1] : "unknown";
-      advancedGauges.transactionCostByUser.set({email}, row.cost);
+      advancedGauges.transactionCostByUser.set({ email }, row.cost);
       costByDomainMap.set(
         domain,
         (costByDomainMap.get(domain) || 0) + row.cost,
       );
     }
     for (const [email_domain, cost] of costByDomainMap.entries()) {
-      advancedGauges.transactionCostByEmailDomain.set({email_domain}, cost);
+      advancedGauges.transactionCostByEmailDomain.set({ email_domain }, cost);
     }
 
     // Tokens per message + prompt/completion ratio per model
@@ -1923,14 +1923,14 @@ export async function updateAdvancedMetrics(): Promise<void> {
     for (const [m, total] of tokensByModelTotal.entries()) {
       const convs = convsByModel.get(m) || 0;
       advancedGauges.transactionTokenAvgPerMessageByModel.set(
-        {model: m},
+        { model: m },
         convs > 0 ? total / convs : 0,
       );
       const byType = tokensByModelType.get(m) || {};
       const prompt = byType.prompt || 0;
       const completion = byType.completion || 0;
       advancedGauges.transactionPromptCompletionRatioByModel.set(
-        {model: m},
+        { model: m },
         prompt > 0 ? completion / prompt : 0,
       );
     }
@@ -1950,7 +1950,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     }
     for (const [agentId, cost] of costByAgentMap.entries()) {
       const displayName = agentMap.get(agentId) || agentId;
-      advancedGauges.transactionCostByAgent.set({agent: displayName}, cost);
+      advancedGauges.transactionCostByAgent.set({ agent: displayName }, cost);
     }
     advancedGauges.costPerConversationAvg.set(
       totalConvCount > 0 ? totalCost / totalConvCount : 0,
@@ -1965,27 +1965,27 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // Message collection is scanned only once instead of 4 separate times.
     const [agentFacetAgg, agentByAuthorAgg] = await Promise.all([
       Message.aggregate([
-        {$match: {model: {$regex: /^agent_/}}},
+        { $match: { model: { $regex: /^agent_/ } } },
         {
           $facet: {
             uniqueUsersAll: [
-              {$group: {_id: {model: "$model", user: "$user"}}},
-              {$group: {_id: "$_id.model", users: {$sum: 1}}},
+              { $group: { _id: { model: "$model", user: "$user" } } },
+              { $group: { _id: "$_id.model", users: { $sum: 1 } } },
             ],
             uniqueUsers30d: [
-              {$match: {createdAt: {$gte: thirtyDaysAgo}}},
-              {$group: {_id: {model: "$model", user: "$user"}}},
-              {$group: {_id: "$_id.model", users: {$sum: 1}}},
+              { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+              { $group: { _id: { model: "$model", user: "$user" } } },
+              { $group: { _id: "$_id.model", users: { $sum: 1 } } },
             ],
-            lastUsed: [{$group: {_id: "$model", last: {$max: "$createdAt"}}}],
+            lastUsed: [{ $group: { _id: "$model", last: { $max: "$createdAt" } } }],
             msgsPerConv: [
               {
                 $group: {
-                  _id: {model: "$model", conv: "$conversationId"},
-                  msgs: {$sum: 1},
+                  _id: { model: "$model", conv: "$conversationId" },
+                  msgs: { $sum: 1 },
                 },
               },
-              {$group: {_id: "$_id.model", avgMsgs: {$avg: "$msgs"}}},
+              { $group: { _id: "$_id.model", avgMsgs: { $avg: "$msgs" } } },
             ],
           },
         },
@@ -1999,8 +1999,8 @@ export async function updateAdvancedMetrics(): Promise<void> {
             as: "u",
           },
         },
-        {$unwind: {path: "$u", preserveNullAndEmptyArrays: true}},
-        {$group: {_id: "$u.email", count: {$sum: 1}}},
+        { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
+        { $group: { _id: "$u.email", count: { $sum: 1 } } },
       ]),
     ]);
 
@@ -2021,7 +2021,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       if (!name) {
         continue;
       }
-      advancedGauges.agentUniqueUsersCount.set({agent: name}, row.users);
+      advancedGauges.agentUniqueUsersCount.set({ agent: name }, row.users);
     }
     advancedGauges.agentUniqueUsers30d.reset();
     for (const row of agentUniqueUsers30dAgg) {
@@ -2029,7 +2029,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       if (!name) {
         continue;
       }
-      advancedGauges.agentUniqueUsers30d.set({agent: name}, row.users);
+      advancedGauges.agentUniqueUsers30d.set({ agent: name }, row.users);
     }
     advancedGauges.agentLastUsedAgeSeconds.reset();
     for (const row of agentLastUsedAgg) {
@@ -2038,7 +2038,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
         continue;
       }
       const ageSec = (now.getTime() - new Date(row.last).getTime()) / 1000;
-      advancedGauges.agentLastUsedAgeSeconds.set({agent: name}, ageSec);
+      advancedGauges.agentLastUsedAgeSeconds.set({ agent: name }, ageSec);
     }
     advancedGauges.agentAvgMessagesPerUse.reset();
     for (const row of agentMsgsPerConvAgg) {
@@ -2046,7 +2046,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       if (!name) {
         continue;
       }
-      advancedGauges.agentAvgMessagesPerUse.set({agent: name}, row.avgMsgs);
+      advancedGauges.agentAvgMessagesPerUse.set({ agent: name }, row.avgMsgs);
     }
     advancedGauges.agentCreationCountByDomain.reset();
     const agentByDomainMap: Map<string, number> = new Map();
@@ -2060,7 +2060,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       );
     }
     for (const [email_domain, count] of agentByDomainMap.entries()) {
-      advancedGauges.agentCreationCountByDomain.set({email_domain}, count);
+      advancedGauges.agentCreationCountByDomain.set({ email_domain }, count);
     }
 
     __mark("MCP per-tool per-domain & unique users + tool call latency");
@@ -2071,23 +2071,23 @@ export async function updateAdvancedMetrics(): Promise<void> {
         Message.aggregate([
           {
             $match: {
-              createdAt: {$gte: thirtyDaysAgo},
+              createdAt: { $gte: thirtyDaysAgo },
               "content.type": "tool_call",
             },
           },
-          {$unwind: "$content"},
-          {$match: {"content.type": "tool_call"}},
+          { $unwind: "$content" },
+          { $match: { "content.type": "tool_call" } },
           {
             $addFields: {
               toolName: {
                 $ifNull: [
                   "$content.tool_call.name",
-                  {$ifNull: ["$content.tool_call.function.name", "unknown"]},
+                  { $ifNull: ["$content.tool_call.function.name", "unknown"] },
                 ],
               },
             },
           },
-          {$match: {toolName: {$regex: "_mcp_"}}},
+          { $match: { toolName: { $regex: "_mcp_" } } },
           {
             $addFields: {
               userObjectId: {
@@ -2108,51 +2108,51 @@ export async function updateAdvancedMetrics(): Promise<void> {
               as: "u",
             },
           },
-          {$unwind: {path: "$u", preserveNullAndEmptyArrays: true}},
+          { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
           {
             $group: {
               _id: {
                 toolId: "$toolName",
                 email: "$u.email",
               },
-              count: {$sum: 1},
+              count: { $sum: 1 },
             },
           },
         ]),
         Message.aggregate([
           {
             $match: {
-              createdAt: {$gte: thirtyDaysAgo},
+              createdAt: { $gte: thirtyDaysAgo },
               "content.type": "tool_call",
             },
           },
-          {$unwind: "$content"},
-          {$match: {"content.type": "tool_call"}},
+          { $unwind: "$content" },
+          { $match: { "content.type": "tool_call" } },
           {
             $addFields: {
               toolName: {
                 $ifNull: [
                   "$content.tool_call.name",
-                  {$ifNull: ["$content.tool_call.function.name", "unknown"]},
+                  { $ifNull: ["$content.tool_call.function.name", "unknown"] },
                 ],
               },
             },
           },
-          {$match: {toolName: {$regex: "_mcp_"}}},
-          {$group: {_id: {tool: "$toolName", user: "$user"}}},
-          {$group: {_id: "$_id.tool", users: {$sum: 1}}},
+          { $match: { toolName: { $regex: "_mcp_" } } },
+          { $group: { _id: { tool: "$toolName", user: "$user" } } },
+          { $group: { _id: "$_id.tool", users: { $sum: 1 } } },
         ]),
         ToolCall.aggregate([
           {
             $project: {
               toolId: 1,
-              latencyMs: {$subtract: ["$updatedAt", "$createdAt"]},
+              latencyMs: { $subtract: ["$updatedAt", "$createdAt"] },
             },
           },
           {
             $group: {
               _id: "$toolId",
-              avgLatencyMs: {$avg: "$latencyMs"},
+              avgLatencyMs: { $avg: "$latencyMs" },
             },
           },
         ]),
@@ -2172,19 +2172,19 @@ export async function updateAdvancedMetrics(): Promise<void> {
     for (const [key, count] of mcpDomainAcc.entries()) {
       const [toolId, email_domain] = key.split("\u0000");
       advancedGauges.mcpToolCallByUserDomain30d.set(
-        {toolId, email_domain},
+        { toolId, email_domain },
         count,
       );
     }
     advancedGauges.mcpUniqueUsersByTool30d.reset();
     for (const row of mcpUniqueByToolAgg) {
-      advancedGauges.mcpUniqueUsersByTool30d.set({toolId: row._id}, row.users);
+      advancedGauges.mcpUniqueUsersByTool30d.set({ toolId: row._id }, row.users);
     }
     advancedGauges.toolCallAvgLatencySeconds.reset();
     for (const row of toolLatencyAgg) {
       const ms: number = row.avgLatencyMs || 0;
       advancedGauges.toolCallAvgLatencySeconds.set(
-        {toolId: row._id || "unknown"},
+        { toolId: row._id || "unknown" },
         ms / 1000,
       );
     }
@@ -2199,7 +2199,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       fileUploads7d,
       fileSizePercAgg,
     ] = await Promise.all([
-      File.aggregate([{$group: {_id: "$type", count: {$sum: 1}}}]),
+      File.aggregate([{ $group: { _id: "$type", count: { $sum: 1 } } }]),
       File.aggregate([
         {
           $lookup: {
@@ -2209,16 +2209,16 @@ export async function updateAdvancedMetrics(): Promise<void> {
             as: "u",
           },
         },
-        {$unwind: {path: "$u", preserveNullAndEmptyArrays: true}},
+        { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
         {
           $group: {
             _id: "$u.email",
-            totalBytes: {$sum: "$bytes"},
+            totalBytes: { $sum: "$bytes" },
           },
         },
       ]),
-      File.countDocuments({createdAt: {$gte: oneDayAgo}}),
-      File.countDocuments({createdAt: {$gte: sevenDaysAgo}}),
+      File.countDocuments({ createdAt: { $gte: oneDayAgo } }),
+      File.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
       File.aggregate([
         {
           $group: {
@@ -2238,7 +2238,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.fileCountByType.reset();
     for (const row of fileTypeAgg) {
       advancedGauges.fileCountByType.set(
-        {type: row._id || "unknown"},
+        { type: row._id || "unknown" },
         row.count,
       );
     }
@@ -2254,7 +2254,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
       );
     }
     for (const [email_domain, bytes] of fileBytesByDomainMap.entries()) {
-      advancedGauges.fileBytesByUserDomain.set({email_domain}, bytes);
+      advancedGauges.fileBytesByUserDomain.set({ email_domain }, bytes);
     }
     advancedGauges.fileUploadCount24h.set(fileUploads24h);
     advancedGauges.fileUploadCount7d.set(fileUploads7d);
@@ -2267,22 +2267,22 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // --- Feedback extensions: by tag-only and by domain (30d) ---
     const [feedbackByTagOnlyAgg, feedbackByDomain30dAgg] = await Promise.all([
       Message.aggregate([
-        {$match: {"feedback.rating": {$in: ["thumbsUp", "thumbsDown"]}}},
+        { $match: { "feedback.rating": { $in: ["thumbsUp", "thumbsDown"] } } },
         {
           $group: {
             _id: {
-              tag: {$ifNull: ["$feedback.tag", "no_tag"]},
+              tag: { $ifNull: ["$feedback.tag", "no_tag"] },
               rating: "$feedback.rating",
             },
-            count: {$sum: 1},
+            count: { $sum: 1 },
           },
         },
       ]),
       Message.aggregate([
         {
           $match: {
-            createdAt: {$gte: thirtyDaysAgo},
-            "feedback.rating": {$in: ["thumbsUp", "thumbsDown"]},
+            createdAt: { $gte: thirtyDaysAgo },
+            "feedback.rating": { $in: ["thumbsUp", "thumbsDown"] },
           },
         },
         {
@@ -2305,14 +2305,14 @@ export async function updateAdvancedMetrics(): Promise<void> {
             as: "u",
           },
         },
-        {$unwind: {path: "$u", preserveNullAndEmptyArrays: true}},
+        { $unwind: { path: "$u", preserveNullAndEmptyArrays: true } },
         {
           $group: {
             _id: {
               email: "$u.email",
               rating: "$feedback.rating",
             },
-            count: {$sum: 1},
+            count: { $sum: 1 },
           },
         },
       ]),
@@ -2341,7 +2341,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     for (const [key, count] of feedbackDomainAcc.entries()) {
       const [email_domain, rating] = key.split("\u0000");
       advancedGauges.feedbackCountByDomain30d.set(
-        {email_domain, rating},
+        { email_domain, rating },
         count,
       );
     }
@@ -2351,12 +2351,12 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // --- Sessions & auth ---
     const [sessionActive, sessionExpired24h, verifiedCount, userRoleAgg] =
       await Promise.all([
-        Session.countDocuments({expiration: {$gt: now}}),
+        Session.countDocuments({ expiration: { $gt: now } }),
         Session.countDocuments({
-          expiration: {$gte: oneDayAgo, $lte: now},
+          expiration: { $gte: oneDayAgo, $lte: now },
         }),
-        User.countDocuments({emailVerified: true}),
-        User.aggregate([{$group: {_id: "$role", count: {$sum: 1}}}]),
+        User.countDocuments({ emailVerified: true }),
+        User.aggregate([{ $group: { _id: "$role", count: { $sum: 1 } } }]),
       ]);
     advancedGauges.sessionActiveCount.set(sessionActive);
     advancedGauges.sessionExpiredCount24h.set(sessionExpired24h);
@@ -2366,7 +2366,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.userCountByRole.reset();
     for (const row of userRoleAgg) {
       advancedGauges.userCountByRole.set(
-        {role: row._id || "unknown"},
+        { role: row._id || "unknown" },
         row.count,
       );
     }
@@ -2376,13 +2376,13 @@ export async function updateAdvancedMetrics(): Promise<void> {
     // --- Prompts library, shared links, conversation tags ---
     const [promptGroupByCategoryAgg, sharedLinks24h, convTagUsageAgg] =
       await Promise.all([
-        PromptGroup.aggregate([{$group: {_id: "$category", count: {$sum: 1}}}]),
-        SharedLink.countDocuments({createdAt: {$gte: oneDayAgo}}),
+        PromptGroup.aggregate([{ $group: { _id: "$category", count: { $sum: 1 } } }]),
+        SharedLink.countDocuments({ createdAt: { $gte: oneDayAgo } }),
         ConversationTag.aggregate([
           {
             $group: {
               _id: "$tag",
-              total: {$sum: {$ifNull: ["$count", 0]}},
+              total: { $sum: { $ifNull: ["$count", 0] } },
             },
           },
         ]),
@@ -2390,7 +2390,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.promptGroupCountByCategory.reset();
     for (const row of promptGroupByCategoryAgg) {
       advancedGauges.promptGroupCountByCategory.set(
-        {category: row._id || "uncategorized"},
+        { category: row._id || "uncategorized" },
         row.count,
       );
     }
@@ -2398,7 +2398,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.conversationTagUsageCount.reset();
     for (const row of convTagUsageAgg) {
       advancedGauges.conversationTagUsageCount.set(
-        {tag: row._id || "untagged"},
+        { tag: row._id || "untagged" },
         row.total,
       );
     }
