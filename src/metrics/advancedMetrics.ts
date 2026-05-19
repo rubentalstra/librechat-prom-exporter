@@ -609,6 +609,12 @@ export const advancedGauges = {
     help: "1 per recommended MongoDB index that is NOT present on startup (informational; does not block scrapes)",
     labelNames: ["collection", "key"],
   }),
+  exporterSectionDurationSeconds: new client.Histogram({
+    name: "librechat_exporter_section_duration_seconds",
+    help: "Duration of each advanced-scrape section, observed every tick",
+    labelNames: ["section"],
+    buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120],
+  }),
 };
 
 /**
@@ -658,22 +664,25 @@ const LOG_TIMINGS = envFlag("LOG_TIMINGS", false);
 
 export async function updateAdvancedMetrics(): Promise<void> {
   try {
-    // [perf] section timing — gated behind LOG_TIMINGS=true to keep normal
-    // operation quiet. When enabled, each section logs its duration and the
-    // cumulative time since the scrape started.
     let __lastMark = Date.now();
     const __startMark = __lastMark;
-    const __mark = LOG_TIMINGS
-      ? (label: string): void => {
-          const now = Date.now();
-          console.log(
-            `[adv-section] ${label}: ${((now - __lastMark) / 1000).toFixed(3)}s (cumulative ${((now - __startMark) / 1000).toFixed(3)}s)`,
-          );
-          __lastMark = now;
-        }
-      : (_label: string): void => {
-          // no-op when timing logs are disabled
-        };
+    const __mark = (label: string): void => {
+      const now = Date.now();
+      const durationSec = (now - __lastMark) / 1000;
+      // Strip trailing parentheticals so dynamic counts in labels
+      // (e.g. "(1020 users)") don't explode histogram cardinality.
+      const section = label.replace(/\s*\([^)]*\)\s*$/, "");
+      advancedGauges.exporterSectionDurationSeconds.observe(
+        { section },
+        durationSec,
+      );
+      if (LOG_TIMINGS) {
+        console.log(
+          `[adv-section] ${label}: ${durationSec.toFixed(3)}s (cumulative ${((now - __startMark) / 1000).toFixed(3)}s)`,
+        );
+      }
+      __lastMark = now;
+    };
     const now = new Date();
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
