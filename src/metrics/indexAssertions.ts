@@ -32,6 +32,31 @@ const RECOMMENDED_INDEXES: ReadonlyArray<{
     key: { createdAt: 1 },
     reason: "new_users_30d and retention metrics",
   },
+  {
+    collection: "messages",
+    key: { createdAt: 1 },
+    reason: "every 30-day window (feedback, MCP, activity, retention, quality)",
+  },
+  {
+    collection: "messages",
+    key: { isCreatedByUser: 1, createdAt: -1 },
+    reason: "assistant-vs-user message splits across time windows",
+  },
+  {
+    collection: "files",
+    key: { user: 1 },
+    reason: "file bytes by user-domain after $lookup removal",
+  },
+  {
+    collection: "transactions",
+    key: { user: 1 },
+    reason: "per-user cost facets",
+  },
+  {
+    collection: "transactions",
+    key: { conversationId: 1 },
+    reason: "costByAgentAgg $match by convIdToAgentId keys",
+  },
 ];
 
 function keysMatch(
