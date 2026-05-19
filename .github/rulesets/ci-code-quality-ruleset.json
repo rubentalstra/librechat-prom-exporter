@@ -6,9 +6,7 @@
   "conditions": {
     "ref_name": {
       "exclude": [],
-      "include": [
-        "main"
-      ]
+      "include": ["main"]
     }
   },
   "rules": [

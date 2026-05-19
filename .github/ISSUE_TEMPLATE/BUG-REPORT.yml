@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to file a bug report for LibreChat Prometheus Exporter!
-        
+
         Before submitting, please:
         - Search existing [Issues and Discussions](https://github.com/rubentalstra/librechat-prom-exporter/discussions) to see if your bug has already been reported.
         - Confirm whether the issue affects the exporter service, the Grafana dashboard, or both.
@@ -57,9 +57,9 @@ body:
       label: Relevant Log Output
       description: |
         Please paste any relevant logs that were generated when reproducing the issue.
-        
+
         For Docker logs, check the container logs.
-        
+
         For local runs, include the console output if possible.
       render: shell
   - type: textarea
