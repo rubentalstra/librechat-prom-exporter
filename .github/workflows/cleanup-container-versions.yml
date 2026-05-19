@@ -1,0 +1,40 @@
+name: Cleanup Container Versions
+
+# Deletes orphaned (untagged) container manifest versions from GHCR.
+# Each CD push leaves the previous push's per-platform manifests behind
+# as untagged versions — GHCR never auto-prunes these. Without this job,
+# the Packages UI accumulates `sha256:...` entries indefinitely.
+#
+# Strategy:
+#   - delete-only-untagged-versions: 'true' protects every tagged release
+#     (latest, v1.2.3, v1.2, etc.) — they are never touched.
+#   - min-versions-to-keep: 20 keeps the 20 most recent versions overall
+#     so a recently-pushed image whose digest hasn't yet been tagged by
+#     a downstream consumer is not yanked from under their feet.
+#   - Cosign signatures (`sha256-<digest>.sig`) and SBOM attestations
+#     are themselves stored under tags (the hyphenated form), so they
+#     are protected by `delete-only-untagged-versions: 'true'`.
+
+on:
+  schedule:
+    - cron: "0 3 * * 0" # Sunday 03:00 UTC, weekly
+  workflow_dispatch: # also runnable on-demand from the Actions tab
+
+permissions:
+  packages: write
+
+concurrency:
+  group: cleanup-container-versions
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete untagged container versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: librechat-prom-exporter
+          package-type: container
+          min-versions-to-keep: 20
+          delete-only-untagged-versions: "true"
