@@ -41,6 +41,6 @@ jobs:
       - name: Run Lighthouse
         uses: treosh/lighthouse-ci-action@v12
         with:
-          configPath: "./website/lighthouserc.json"
+          configPath: "./website/lighthouserc.cjs"
           uploadArtifacts: true
           temporaryPublicStorage: true
