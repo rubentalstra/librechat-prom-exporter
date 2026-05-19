@@ -8,7 +8,7 @@ permissions:
   contents: read
   packages: write
   id-token: write # cosign keyless signing via Sigstore
-  attestations: write # GitHub-native build attestations
+  security-events: write # upload-sarif posts to Code Scanning
 
 jobs:
   build:
@@ -39,8 +39,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Single multi-arch build + push. Buildx emits SLSA provenance and
-      # SBOM attestations into the registry automatically.
+      # Single multi-arch build + push.
+      # provenance + sbom are intentionally DISABLED here:
+      #   - they each publish an extra OCI manifest into GHCR ("version"
+      #     entries in the Packages UI) that duplicates work we already do
+      #     via `cosign sign` (signature) and `anchore/sbom-action` (SPDX
+      #     SBOM uploaded as a release artifact).
+      #   - dropping them keeps the registry surface to:
+      #       latest tag + 1 sig + amd64 manifest + arm64 manifest + index
+      #     per push, instead of ~7 entries with attestations on.
       - name: Build and push
         id: push
         uses: docker/build-push-action@v7
@@ -53,8 +60,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: true
-          sbom: true
+          provenance: false
+          sbom: false
 
       # Sign every published tag with Sigstore keyless cosign.
       # Verifiable downstream via:
