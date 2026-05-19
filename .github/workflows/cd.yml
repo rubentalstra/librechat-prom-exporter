@@ -5,7 +5,7 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: read
+  contents: write # softprops/action-gh-release attaches SBOM to GitHub Releases on tag push
   packages: write
   id-token: write # cosign keyless signing via Sigstore + GitHub attestations
   attestations: write # actions/attest-build-provenance + actions/attest-sbom
@@ -151,6 +151,11 @@ jobs:
           format: spdx-json
           output-file: sbom.spdx.json
           upload-artifact: true
+          # softprops/action-gh-release below attaches the SBOM to the
+          # GitHub Release on tag pushes. Disabling the action's built-in
+          # release attach avoids a duplicate upload (and avoids needing
+          # contents:write here just for that path).
+          upload-release-assets: false
 
       # Attest the SBOM via GitHub's native framework. Same logic as
       # build-provenance above: `push-to-registry: false` keeps it out
