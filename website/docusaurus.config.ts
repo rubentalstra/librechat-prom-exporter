@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+
 import type * as Preset from "@docusaurus/preset-classic";
 import type { Config } from "@docusaurus/types";
 import { themes as prismThemes } from "prism-react-renderer";
@@ -5,6 +7,17 @@ import { themes as prismThemes } from "prism-react-renderer";
 const ORG = "rubentalstra";
 const REPO = "librechat-prom-exporter";
 const REPO_URL = `https://github.com/${ORG}/${REPO}`;
+
+// Single source of truth for the version label in the navbar dropdown
+// and any other place we mention "current version". Reads from the root
+// package.json so a `npm version` bump (or the Prepare-release workflow)
+// updates the docs site automatically — no static strings to update by
+// hand. Falls back gracefully if the field is missing.
+const require = createRequire(import.meta.url);
+const rootPkg = require("../package.json") as { version: string };
+const APP_VERSION = rootPkg.version; // e.g. "0.9.0"
+const APP_MAJOR_MINOR = APP_VERSION.split(".").slice(0, 2).join("."); // e.g. "0.9"
+const CURRENT_VERSION_LABEL = `${APP_MAJOR_MINOR} (Current)`;
 
 // Lighthouse CI runs `npm run build` and serves the resulting `build/`
 // directly at `/` via lhci's built-in static server — it has no way to
@@ -97,7 +110,7 @@ const config: Config = {
           editUrl: `${REPO_URL}/tree/main/website/`,
           showLastUpdateAuthor: true,
           showLastUpdateTime: true,
-          versions: { current: { label: "0.8 (Current)" } },
+          versions: { current: { label: CURRENT_VERSION_LABEL } },
           lastVersion: "current",
         },
         blog: {

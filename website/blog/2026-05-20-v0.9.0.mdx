@@ -1,0 +1,60 @@
+---
+slug: v0.9.0
+title: v0.9.0 — Documentation site
+authors: [rubentalstra]
+tags: [release, docs]
+date: 2026-05-20
+---
+
+v0.9.0 introduces a dedicated documentation site at **[rubentalstra.github.io/librechat-prom-exporter](https://rubentalstra.github.io/librechat-prom-exporter/)**. No exporter code changes — this release is entirely about how the project is documented, contributed to, and released.
+
+{/* truncate */}
+
+### What's new
+
+- **Docusaurus 3.10.1** docs site served from GitHub Pages. Versioned per release (use the version dropdown in the navbar after future cuts), local search (no Algolia signup), MDX content with `.mdx` extension throughout. Built with v4 future flags on (`future.v4: true`, `future.faster: true`) so the eventual Docusaurus 4 upgrade is a no-op.
+- **Reference docs migrated out of the README.** Environment variables, auth methods, metrics catalog, Prometheus + Grafana setup, tuning, troubleshooting, dashboard import — all now live on the docs site with proper navigation, search, and per-page edit-on-GitHub links.
+- **Contributor docs written from scratch** rather than copying CONTRIBUTING.md:
+  - [Architecture](/docs/contributing/architecture) — 1500-word deep-dive on the two-tier scrape, the eager-kickoff promise pattern, JS-side joins instead of `$lookup`, cardinality gates, ESM/NodeNext gotchas. Two Mermaid diagrams (scrape sequence + auth method decision flowchart).
+  - [Ways to contribute](/docs/contributing/ways-to-contribute) — five concrete paths: high-signal bug reports, propose-a-metric, share-a-dashboard, improve-docs, sponsor.
+  - [Adding a metric](/docs/contributing/adding-a-metric) — step-by-step playbook including the cardinality budget rules every new metric must follow.
+- **README slimmed** from 343 lines to 53. **CONTRIBUTING.md** from 86 lines to 26 — both now point at the docs site for detail.
+- **Blog as changelog.** This post is the first of a "Changelog & news" feed on the docs site, with RSS/Atom for feed readers (`<link rel="alternate">` in every page's `<head>`).
+
+### CI / CD additions
+
+- **Lighthouse CI on PRs** — every PR touching `website/**` triggers a Lighthouse run with thresholds: a11y ≥ 90 and SEO ≥ 90 as errors; performance ≥ 85 and best-practices ≥ 85 as warnings. Full report posted to a temporary public URL and linked in the PR.
+- **Docs build verification on PRs** — `docs-test-deploy.yml` runs the production Docusaurus build on every PR. `onBrokenLinks`, `onBrokenAnchors`, and `onBrokenMarkdownLinks` are all set to `"throw"` so dead refs and stale anchors fail review.
+- **Path-filtered `docs-deploy.yml`** — push-to-main only triggers a Pages deploy when `website/**` or `CONTRIBUTING.md` actually changes.
+- **GitHub-native attestations** for SBOM + build provenance (`actions/attest-build-provenance@v4`, `actions/attest-sbom@v4`) — verifiable via `gh attestation verify oci://...`. No GHCR clutter because `push-to-registry: false`.
+
+### Release automation
+
+The version number now lives in **one place** — root `package.json` — and the docs site reads it dynamically. The current-version label in the navbar dropdown updates automatically when `package.json` is bumped; no more hand-editing `docusaurus.config.ts` per release.
+
+A new **"Prepare release"** workflow (`workflow_dispatch`-only) automates the rest:
+
+1. Trigger it from the Actions tab with `version: 0.10.0` (no leading `v`).
+2. The workflow snapshots the docs site as `0.10` (so the new "0.10" version dropdown entry will work after deploy), bumps `package.json` + `package-lock.json`, and opens a "Release v0.10.0" PR.
+3. Review + merge.
+4. Tag the merge commit (`git tag v0.10.0 origin/main && git push --tags`) — or use the GitHub UI's "Draft a new release → Generate release notes" flow.
+5. CD takes over: multi-arch build, cosign sign, attest build-provenance + SBOM, Trivy scan, attach SBOM to the Release.
+
+### Community polish
+
+- **`.github/ISSUE_TEMPLATE/config.yml`** — adds contact links above the existing Bug/Feature templates pointing to the docs site, GitHub Discussions, and the private security advisory flow.
+- **GitHub Discussions** referenced from the issue config + docs site footer — needs a one-time toggle under repo Settings → General → Features → Discussions to activate.
+
+### Upgrading
+
+Image-side: `docker pull ghcr.io/rubentalstra/librechat-prom-exporter:0.9.0`. No code changes; behavior identical to v0.8.0. The version number is bumped just to land a clean release tag for the docs site.
+
+If you've bookmarked specific README sections, update those bookmarks to the docs site:
+
+| Old README anchor        | New docs site URL                       |
+|--------------------------|-----------------------------------------|
+| `#environment-variables` | `/docs/reference/environment-variables` |
+| `#auth-on-metrics`       | `/docs/reference/auth`                  |
+| `#tuning`                | `/docs/guides/tuning`                   |
+| `#troubleshooting`       | `/docs/guides/troubleshooting`          |
+| `#dashboard-example`     | `/docs/dashboard`                       |

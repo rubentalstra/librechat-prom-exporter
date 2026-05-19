@@ -3,7 +3,7 @@ slug: v0.8.0
 title: v0.8.0 — Hardening release
 authors: [rubentalstra]
 tags: [release]
-date: 2026-05-20
+date: 2026-05-19
 ---
 
 v0.8.0 is a major hardening release rolling up four merged integration PRs. Every layer of the project — metrics correctness, HTTP server, container, CI/CD, docs — got polish. No breaking changes for default-config deployments; auth and tenant scoping remain opt-in.
@@ -43,20 +43,11 @@ v0.8.0 is a major hardening release rolling up four merged integration PRs. Ever
 - **Weekly Trivy scan** of the published `:latest` — catches CVEs introduced after publish (base-image regression, new Debian advisories) and reports them to GitHub Code Scanning.
 - **PR-time `docker build`** added to CI so Dockerfile regressions surface at review time, not after merge.
 
-### Docs site
-
-This release ships with a full Docusaurus docs site at **[rubentalstra.github.io/librechat-prom-exporter](https://rubentalstra.github.io/librechat-prom-exporter/)**:
-
-- Versioned per release (use the version dropdown in the navbar).
-- Local search (no Algolia signup needed).
-- New [Architecture](/docs/contributing/architecture) deep-dive with Mermaid diagrams of the scrape pipeline and auth decision tree.
-- [Adding a metric](/docs/contributing/adding-a-metric) playbook with cardinality budget rules.
-- README slimmed from 343 → ~50 lines.
-
 ### Upgrading
 
 - `docker pull ghcr.io/rubentalstra/librechat-prom-exporter:0.8.0`. No env-var changes needed for existing deployments.
 - New env vars are all opt-in: see [Environment variables](/docs/reference/environment-variables).
-- Lighthouse CI on the docs site enforces a11y ≥ 90 and SEO ≥ 90 going forward.
 
 Thanks to everyone who reported issues during the integration PRs.
+
+(A separate documentation site landed in [v0.9.0](/blog/v0.9.0) — that's the recommended way to read these docs going forward.)
