@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -87,7 +86,8 @@ export default [
     .map((config) => {
       // Strip `plugins` from FlatCompat output — flat config expects plugins
       // declared at the top-level config object, not on every imported block.
-      const { plugins: _plugins, ...rest } = config;
+      const rest = { ...config };
+      delete rest.plugins;
       return { ...rest, files: ["**/*.ts"] };
     }),
   {
