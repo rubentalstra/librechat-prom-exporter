@@ -46,14 +46,16 @@ jobs:
           # against repo rename.
           package: librechat-prom-exporter
 
-          # Primary cleanup: delete untagged images. Per-arch children of
-          # tagged indexes, cosign sigs, and attestation referrers are
-          # excluded automatically before this rule applies.
-          delete-untagged: true
-
-          # Safety buffer: keep newest 5 truly-untagged digests so an
-          # in-flight push isn't pulled out from under a concurrent
-          # consumer fetch.
+          # Untagged cleanup: keep the newest 5 truly-untagged digests
+          # and delete the rest. Per-arch children of tagged indexes,
+          # cosign sigs, and attestation referrers are excluded from
+          # the working set BEFORE this rule applies, so they're safe.
+          #
+          # keep-n-untagged and delete-untagged are mutually exclusive
+          # in this action — keep-n-untagged already deletes the
+          # surplus, so delete-untagged must not be set alongside.
+          # The 5-digest buffer prevents an in-flight push from being
+          # pulled out from under a concurrent consumer fetch.
           keep-n-untagged: 5
 
           # Sweep stranded cosign signature tags (sha256-<digest>.sig)
