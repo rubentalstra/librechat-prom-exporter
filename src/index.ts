@@ -1,9 +1,16 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import client from "prom-client";
 import "dotenv/config";
 import { basicGauges } from "./metrics/basicMetrics";
 import { advancedGauges } from "./metrics/advancedMetrics";
+import {
+  updateBasicMetricsTimed,
+  updateAdvancedMetricsTimed,
+  waitForIdle,
+} from "./metrics";
+import { envFlag } from "./metrics/util";
+import { assertIndexes } from "./metrics/indexAssertions";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -26,25 +33,42 @@ for (const gauge of Object.values(advancedGauges)) {
   register.registerMetric(gauge as client.Metric);
 }
 
-// Connect to MongoDB (adjust the URI as needed)
+advancedGauges.exporterMongoConnected.set(0);
+mongoose.connection.on("connected", () =>
+  advancedGauges.exporterMongoConnected.set(1),
+);
+mongoose.connection.on("reconnected", () =>
+  advancedGauges.exporterMongoConnected.set(1),
+);
+mongoose.connection.on("disconnected", () =>
+  advancedGauges.exporterMongoConnected.set(0),
+);
+mongoose.connection.on("error", () =>
+  advancedGauges.exporterMongoConnected.set(0),
+);
+
 const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/librechat";
 const mongoPoolSize = parseInt(process.env.MONGO_POOL_SIZE || "50");
 mongoose
-  .connect(mongoURI, { maxPoolSize: mongoPoolSize })
-  .then(() =>
-    console.log(`Connected to MongoDB (maxPoolSize=${mongoPoolSize})`),
-  )
+  .connect(mongoURI, {
+    maxPoolSize: mongoPoolSize,
+    // 5s vs the mongoose default of 30s so /health flips fast on outage
+    serverSelectionTimeoutMS: 5000,
+  })
+  .then(() => {
+    console.log(`Connected to MongoDB (maxPoolSize=${mongoPoolSize})`);
+    return assertIndexes();
+  })
   .catch((error: Error) => {
     console.error("MongoDB connection error:", error);
     process.exit(1);
   });
 
-import { updateBasicMetricsTimed, updateAdvancedMetricsTimed } from "./metrics";
-// Schedule basic and advanced updates on independent intervals to avoid
-// advanced scrapes blocking the much cheaper basic ones.
-setInterval(updateBasicMetricsTimed, refreshInterval);
-setInterval(updateAdvancedMetricsTimed, advancedRefreshInterval);
-import { envFlag } from "./metrics/util";
+const basicTimer = setInterval(updateBasicMetricsTimed, refreshInterval);
+const advancedTimer = setInterval(
+  updateAdvancedMetricsTimed,
+  advancedRefreshInterval,
+);
 if (envFlag("LOG_TIMINGS", false)) {
   console.log(
     `[scheduler] basic every ${refreshInterval}ms, advanced every ${advancedRefreshInterval}ms`,
@@ -53,23 +77,60 @@ if (envFlag("LOG_TIMINGS", false)) {
 updateBasicMetricsTimed();
 updateAdvancedMetricsTimed();
 
-// Expose the /metrics endpoint for Prometheus.
-app.get("/metrics", async (req: Request, res: Response) => {
-  try {
-    res.set("Content-Type", register.contentType);
-    res.send(await register.metrics());
-  } catch (error) {
-    console.error("Error generating metrics:", error);
-    res.status(500).send("Internal Server Error");
+app.get("/metrics", async (_req: Request, res: Response) => {
+  res.set("Content-Type", register.contentType);
+  res.send(await register.metrics());
+});
+
+const READY_STATE_LABEL: Record<number, string> = {
+  0: "disconnected",
+  1: "connected",
+  2: "connecting",
+  3: "disconnecting",
+};
+app.get("/health", (_req: Request, res: Response) => {
+  const state = mongoose.connection.readyState;
+  if (state === 1) {
+    res.status(200).json({ status: "ok", mongo: "connected" });
+  } else {
+    res.status(503).json({
+      status: "degraded",
+      mongo: READY_STATE_LABEL[state] ?? `unknown(${state})`,
+    });
   }
 });
 
-// Health check endpoint.
-app.get("/health", (req: Request, res: Response) => {
-  res.send("OK");
-});
+// Express error middleware: must be last and must have 4 params.
+app.use(
+  (err: Error, _req: Request, res: Response, _next: NextFunction): void => {
+    console.error("Unhandled error:", err);
+    res.status(500).send("Internal Server Error");
+  },
+);
 
-// Start the Express server.
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Exporter listening on port ${port}`);
 });
+
+let isShuttingDown = false;
+async function shutdown(signal: NodeJS.Signals): Promise<void> {
+  if (isShuttingDown) {
+    console.warn(`[shutdown] received ${signal} during shutdown — exiting now`);
+    process.exit(1);
+  }
+  isShuttingDown = true;
+  console.log(`[shutdown] received ${signal} — draining`);
+  clearInterval(basicTimer);
+  clearInterval(advancedTimer);
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  await waitForIdle();
+  try {
+    await mongoose.disconnect();
+  } catch (err) {
+    console.error("[shutdown] mongoose.disconnect failed:", err);
+  }
+  console.log("[shutdown] complete");
+  process.exit(0);
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);

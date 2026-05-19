@@ -63,3 +63,13 @@ export async function updateAdvancedMetricsTimed(): Promise<void> {
 export async function updateMetrics(): Promise<void> {
   await Promise.all([updateBasicMetricsTimed(), updateAdvancedMetricsTimed()]);
 }
+
+export async function waitForIdle(timeoutMs = 10_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!basicRunning && !advancedRunning) {
+      return;
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+  }
+}

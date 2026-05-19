@@ -1,0 +1,82 @@
+import mongoose from "mongoose";
+import { advancedGauges } from "./advancedMetrics";
+
+const RECOMMENDED_INDEXES: ReadonlyArray<{
+  collection: string;
+  key: Record<string, 1 | -1>;
+  reason: string;
+}> = [
+  {
+    collection: "messages",
+    key: { model: 1 },
+    reason:
+      "agent message scans (model: /^agent_/), per-model error rate, byModelType facet",
+  },
+  {
+    collection: "transactions",
+    key: { createdAt: 1 },
+    reason: "c24h / c7d / c30d cost facets",
+  },
+  {
+    collection: "conversations",
+    key: { agent_id: 1 },
+    reason: "convIdToAgentId join-map build",
+  },
+  {
+    collection: "users",
+    key: { provider: 1 },
+    reason: "librechat_user_provider_count",
+  },
+  {
+    collection: "users",
+    key: { createdAt: 1 },
+    reason: "new_users_30d and retention metrics",
+  },
+];
+
+function keysMatch(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+): boolean {
+  const ak = Object.keys(a);
+  const bk = Object.keys(b);
+  if (ak.length !== bk.length) {
+    return false;
+  }
+  for (const k of ak) {
+    if (a[k] !== b[k]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export async function assertIndexes(): Promise<void> {
+  const db = mongoose.connection.db;
+  if (!db) {
+    console.warn("[indexes] mongoose connection has no db; skipping check");
+    return;
+  }
+  for (const rec of RECOMMENDED_INDEXES) {
+    try {
+      const existing = await db.collection(rec.collection).indexes();
+      const found = existing.some((ix) => keysMatch(ix.key, rec.key));
+      if (!found) {
+        const keyJson = JSON.stringify(rec.key);
+        console.warn(
+          `[indexes] missing recommended index on ${rec.collection}: ${keyJson} ` +
+            `(${rec.reason}). Create with: db.${rec.collection}.createIndex(${keyJson})`,
+        );
+        advancedGauges.exporterMissingIndexes.set(
+          { collection: rec.collection, key: keyJson },
+          1,
+        );
+      }
+    } catch (err) {
+      console.warn(
+        `[indexes] could not inspect ${rec.collection} indexes:`,
+        err,
+      );
+    }
+  }
+}

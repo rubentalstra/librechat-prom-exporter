@@ -600,6 +600,15 @@ export const advancedGauges = {
     help: "Unix timestamp (seconds) of the last successful scrape per metric group",
     labelNames: ["metric_group"],
   }),
+  exporterMongoConnected: new client.Gauge({
+    name: "librechat_exporter_mongo_connected",
+    help: "1 when mongoose reports a connected state (readyState=1), 0 otherwise",
+  }),
+  exporterMissingIndexes: new client.Gauge({
+    name: "librechat_exporter_missing_indexes",
+    help: "1 per recommended MongoDB index that is NOT present on startup (informational; does not block scrapes)",
+    labelNames: ["collection", "key"],
+  }),
 };
 
 /**
