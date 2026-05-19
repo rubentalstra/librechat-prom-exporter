@@ -14,6 +14,8 @@ COPY src ./src
 RUN npm run build
 
 # Stage 2: Install production dependencies only
+# Uses the same uid as the runtime base (chainguard uid 65532) so the
+# files copied across already have correct ownership at runtime.
 FROM node:25-alpine AS deps
 
 WORKDIR /app
@@ -29,30 +31,39 @@ RUN npm ci --omit=dev --ignore-scripts --prefer-offline --no-audit --silent && \
     find /app/node_modules -name "*.test.js" -delete 2>/dev/null || true && \
     find /app/node_modules -name "*.test.ts" -delete 2>/dev/null || true && \
     find /app/node_modules -name "*.md" -delete 2>/dev/null || true && \
-    mkdir -p /app/logs && chown -R 1001:1001 /app
+    mkdir -p /app/logs && chown -R 65532:65532 /app
 
-# Stage 3: Distroless runtime
-# Build runs on Node 25 (current); runtime stays on the latest distroless
-# image, which tracks Node LTS (24 as of May 2026 — distroless lags major
-# releases). Our prod deps are pure JS, so Node 25 build artifacts run
-# fine on Node 24 runtime. Switch to nodejs25-debian12 once it ships.
-FROM gcr.io/distroless/nodejs24-debian12 AS runtime
+# Stage 3: Chainguard hardened minimal Node runtime
+# Why Chainguard: their public images are rebuilt daily from source against
+# the latest upstream CVE fixes, so we don't sit on a distroless base whose
+# rebuild cadence trails Debian security patches by days/weeks. Currently
+# tracks Node 26.x.
+#
+# Image conventions:
+#   - default user: 65532 (nonroot)
+#   - entrypoint:   /usr/bin/node
+#   - no shell; HEALTHCHECK must use array-form invoking node directly
+FROM cgr.dev/chainguard/node:latest AS runtime
 
 WORKDIR /app
 
-COPY --from=builder --chown=1001:1001 /app/dist ./dist
-COPY --from=deps --chown=1001:1001 /app/node_modules ./node_modules
-COPY --from=deps --chown=1001:1001 /app/logs ./logs
-COPY --chown=1001:1001 package.json ./
+COPY --from=builder --chown=65532:65532 /app/dist ./dist
+COPY --from=deps --chown=65532:65532 /app/node_modules ./node_modules
+COPY --from=deps --chown=65532:65532 /app/logs ./logs
+COPY --chown=65532:65532 package.json ./
 
 ENV NODE_ENV=production \
     PORT=9087
 
 EXPOSE 9087
 
-USER 1001
+USER 65532
 
+# Chainguard's ENTRYPOINT is already /usr/bin/node, so HEALTHCHECK CMD
+# args become `node <args>`. Using array form keeps the shell out of the
+# picture (Chainguard's minimal image has no shell).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD ["/nodejs/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||9087)+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+    CMD ["/usr/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||9087)+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 
+# The base image's ENTRYPOINT is /usr/bin/node, so CMD is just the script.
 CMD ["dist/index.js"]

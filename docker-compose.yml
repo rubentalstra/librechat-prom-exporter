@@ -13,7 +13,7 @@ services:
       # Kubernetes / load balancers would.
       test:
         - CMD
-        - /nodejs/bin/node
+        - /usr/bin/node
         - -e
         - "fetch('http://127.0.0.1:'+(process.env.PORT||9087)+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
       interval: 30s
