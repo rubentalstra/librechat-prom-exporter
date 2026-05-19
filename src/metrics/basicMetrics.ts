@@ -111,7 +111,8 @@ export async function updateBasicMetrics(): Promise<void> {
         basicGauges.toolCalls.set(toolCallCount);
         basicGauges.transactions.set(transactionCount);
 
-        console.log('Basic metrics updated.');
+        // basic scrape duration is reported via the [timing] log when
+        // LOG_TIMINGS=1; no per-cycle "updated" line by default.
     } catch (error) {
         console.error('Error updating basic metrics:', error);
     }
