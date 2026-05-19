@@ -62,8 +62,26 @@ docker-compose*
 # Assets (not needed in production)
 assets/
 
+# Tests are colocated with source as *.test.ts; never needed at runtime
+**/*.test.ts
+**/__tests__
+
 # Configuration files that aren't needed in production
 eslint.config.mjs
+vitest.config.ts
+.prettierrc*
+.prettierignore
+.editorconfig
+.nvmrc
+
+# Git hooks - not needed at runtime
+.husky/
+
+# CI configs / GitHub metadata
+.github/
+
+# Plans / agent scratch
+.claude/
 
 # Prometheus config (for development/example)
 prometheus.yml

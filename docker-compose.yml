@@ -1,19 +1,48 @@
 services:
   exporter:
-#    build: .
+    # Uncomment to build locally instead of pulling from GHCR:
+    # build: .
     image: ghcr.io/rubentalstra/librechat-prom-exporter:latest
+    restart: unless-stopped
     ports:
-      - "${PORT}:${PORT}"
+      - "${PORT:-9087}:${PORT:-9087}"
     env_file:
       - .env
+    healthcheck:
+      # Healthcheck inside the container; uses the same /health endpoint as
+      # Kubernetes / load balancers would.
+      test:
+        - CMD
+        - /nodejs/bin/node
+        - -e
+        - "fetch('http://127.0.0.1:'+(process.env.PORT||9087)+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    networks:
+      - monitoring
+    # NOTE: secrets in .env are loaded as plain-text env vars. For
+    # production deployments prefer Docker secrets / sealed-secrets and
+    # remove env_file in favor of `secrets:` blocks.
 
   prometheus:
-    image: prom/prometheus:latest
+    # Pin the Prometheus version explicitly; never use `:latest` in prod.
+    image: prom/prometheus:v3.6.0
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    networks:
+      - monitoring
+    depends_on:
+      - exporter
+
+networks:
+  monitoring:
+    driver: bridge
 
 volumes:
   prometheus_data:

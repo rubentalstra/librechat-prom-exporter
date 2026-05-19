@@ -14,9 +14,11 @@ Welcome to the **LibreChat Prometheus Exporter** repository! This project provid
 6. [Prometheus & Grafana Configuration](#prometheus--grafana-configuration)
 7. [Dashboard Example](#dashboard-example)
 8. [Dashboard Screenshots](#dashboard-screenshots)
-9. [Project Structure](#project-structure)
-10. [Contributing](#contributing)
-11. [License](#license)
+9. [Tuning](#tuning)
+10. [Troubleshooting](#troubleshooting)
+11. [Project Structure](#project-structure)
+12. [Contributing](#contributing)
+13. [License](#license)
 
 **GDPR Compliance Statement:**  
 This project has been developed with privacy in mind. It only exposes aggregated metrics that do not contain any personally identifiable information (PII), adhering to the principle of data minimization. As a result, this project is designed to be consistent with the requirements of the General Data Protection Regulation (GDPR). However, since overall GDPR compliance depends on the complete data processing workflow and deployment configuration, users are responsible for ensuring that their implementation meets all applicable data protection regulations. This statement is provided for informational purposes only and does not constitute legal advice.
@@ -30,7 +32,7 @@ This project has been developed with privacy in mind. It only exposes aggregated
 
 ## Prerequisites
 
-1. **Node.js** (version 22.x or later recommended)
+1. **Node.js** 24.x or later (25.x recommended; see `.nvmrc`)
 2. **MongoDB 7+** (LibreChat's default docker-compose ships `mongo:8.0`. Older Mongo versions silently emit `0` for the percentile metrics `librechat_conversation_length_p{50,90,95}` and `librechat_file_size_p{50,95}_bytes` — `$percentile` is a 7.0+ operator.)
 3. **Docker** (optional but recommended for running in a container)
 4. **Prometheus** (for metric scraping)
@@ -274,6 +276,35 @@ Below are sample screenshots from the **LibreChat Exporter Dashboard**. These im
    ![Transaction Insights Panel](assets/images/image_5.png)
 
 ---
+
+## Tuning
+
+A few knobs worth thinking about before turning on the exporter at scale:
+
+- **`MONGO_POOL_SIZE`** (default `50`) — sets `maxPoolSize` on the mongoose connection. The advanced scrape fans many aggregations out in parallel via `Promise.all`; if you see queries serialize on small deployments, the pool is the first place to look. Most LibreChat installs are fine at the default.
+- **`ADVANCED_REFRESH_INTERVAL`** (default `REFRESH_INTERVAL × 10`, i.e. 300s) — the heavy `$facet` aggregations run at this cadence. On very large message/transaction collections you may want this longer (e.g. `600000` for 10-minute granularity) to reduce Mongo load. The basic counts continue to refresh on `REFRESH_INTERVAL`.
+- **`REFRESH_INTERVAL`** (default `30000`) — cheap `countDocuments` per collection. Going much lower than 10s is usually wasted load; Prometheus typically scrapes every 15–30s anyway.
+- **`EMIT_PER_USER_METRICS=true`** — only enable on small / single-tenant deployments. Three metrics gain an `email` label and emit one Prometheus time series per user (unbounded growth). The `*_by_email_domain` variants stay enabled regardless and are bounded by company domain count.
+- **`TENANT_ID`** — when set, installs schema-level mongoose hooks that inject `{ $match: { tenantId } }` into every aggregate / find / count. Use this when one MongoDB serves multiple LibreChat tenants and you want metrics scoped to one of them.
+
+Reentrancy: each tier (basic / advanced) holds a per-tier "running" flag and **skips a tick if the previous one is still in flight**. You will see a warn log on each skipped tick (`basic scrape still running, skipping this tick`); these are informational, not errors. Persistent skipping means the scrape budget is too tight — either raise `ADVANCED_REFRESH_INTERVAL` or look at index coverage (`librechat_exporter_missing_indexes`).
+
+## Troubleshooting
+
+- **Percentile gauges (`librechat_conversation_length_p{50,90,95}`, `librechat_file_size_p{50,95}_bytes`) all report `0`.**
+  These metrics rely on Mongo's `$percentile` aggregation operator, which was added in **Mongo 7.0**. On Mongo < 7 the operator returns no result and the exporter sets the gauges to 0. Upgrade to Mongo 7.0+ (LibreChat's default `docker-compose.yml` ships `mongo:8.0`).
+
+- **Missing-index warnings on startup / `librechat_exporter_missing_indexes` non-zero.**
+  Each missing recommended index is logged once after Mongo connect and exposed as a label set on the `librechat_exporter_missing_indexes` gauge. Create the index using the `createIndex` snippet from the log message — they materially affect advanced-scrape duration on large collections.
+
+- **`/health` flapping between 200 and 503.**
+  The exporter forces `serverSelectionTimeoutMS=5s` (vs. mongoose's 30s default) so `/health` flips fast during an outage. If you see oscillation, the underlying Mongo is unstable — check the Mongo logs and connection limits.
+
+- **`/metrics` returns `401` despite a token being set.**
+  Confirm the request hits the exporter directly, not via a proxy that strips `Authorization`. When behind a reverse proxy, also set `TRUST_PROXY` to a value matching your proxy topology so the rate limiter and IP allowlist see the original client IP.
+
+- **CD pipeline blocked on Trivy.**
+  The CD workflow scans the built image and fails on CRITICAL/HIGH vulnerabilities with a fix available. Update the affected dependency (Dependabot opens weekly PRs) or, if the finding is a false-positive, suppress it via `.trivyignore` with a justification.
 
 ## Project Structure
 
