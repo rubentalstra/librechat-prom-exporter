@@ -1,0 +1,70 @@
+---
+title: Docker
+description: Run the exporter from the prebuilt GHCR image with docker-compose.
+sidebar_position: 1
+---
+
+# Docker setup
+
+This is the recommended path. The prebuilt **LibreChat Prometheus Exporter** image is published to GitHub Container Registry — no local build needed.
+
+## 1. Get the env file
+
+Copy the example to `.env` in the same directory as your `docker-compose.yml`:
+
+```bash
+cp .env.example .env
+```
+
+Edit it to point at your LibreChat MongoDB and pick a port. See [Environment variables](../reference/environment-variables) for the full list.
+
+## 2. Start the stack
+
+```bash
+docker compose up -d
+```
+
+This pulls the latest `ghcr.io/rubentalstra/librechat-prom-exporter:latest` for the exporter, and starts a Prometheus container based on the bundled `prometheus.yml`.
+
+## 3. Check it works
+
+```bash
+curl -fsS http://localhost:9087/health
+# {"status":"ok","mongo":"connected"}
+
+curl -fsS http://localhost:9087/metrics | head
+# # HELP librechat_user_count Current number of LibreChat users
+# # TYPE librechat_user_count gauge
+# librechat_user_count 0
+# ...
+```
+
+If `/health` returns `503` with `mongo:"disconnected"`, the exporter cannot reach Mongo — check `MONGO_URI` in your `.env` and that the Mongo container is reachable from the exporter container's network.
+
+## Verifying the published image
+
+The image is signed with Sigstore keyless cosign and carries a SLSA build-provenance attestation. To verify before deploying:
+
+```bash
+# Signature
+cosign verify \
+  --certificate-identity-regexp='^https://github.com/rubentalstra/librechat-prom-exporter/' \
+  --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+  ghcr.io/rubentalstra/librechat-prom-exporter:latest
+
+# Build provenance + SBOM via GitHub native attestations
+gh attestation verify oci://ghcr.io/rubentalstra/librechat-prom-exporter:latest \
+  --owner rubentalstra
+```
+
+## Pinning to a specific release
+
+For production, pin to a version tag rather than `:latest`:
+
+```yaml
+services:
+  exporter:
+    image: ghcr.io/rubentalstra/librechat-prom-exporter:0.8.0
+```
+
+Use the **versions dropdown** at the top of these docs to read the docs that match your pinned release.

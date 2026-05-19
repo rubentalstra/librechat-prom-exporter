@@ -1,0 +1,36 @@
+import type { SidebarsConfig } from "@docusaurus/plugin-content-docs";
+
+const sidebars: SidebarsConfig = {
+  mainSidebar: [
+    "intro",
+    {
+      type: "category",
+      label: "Installation",
+      collapsed: false,
+      items: ["installation/docker", "installation/local"],
+    },
+    {
+      type: "category",
+      label: "Reference",
+      items: ["reference/environment-variables", "reference/auth", "reference/metrics"],
+    },
+    {
+      type: "category",
+      label: "Guides",
+      items: ["guides/prometheus-grafana", "guides/tuning", "guides/troubleshooting"],
+    },
+    "dashboard",
+    {
+      type: "category",
+      label: "Contributing",
+      items: [
+        "contributing/index",
+        "contributing/ways-to-contribute",
+        "contributing/architecture",
+        "contributing/adding-a-metric",
+      ],
+    },
+  ],
+};
+
+export default sidebars;

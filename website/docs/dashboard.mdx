@@ -1,0 +1,41 @@
+---
+title: Grafana dashboard
+description: Bundled Grafana dashboard for visualizing the exporter's metrics.
+sidebar_position: 6
+---
+
+# Grafana dashboard
+
+The repository ships a sample Grafana dashboard at [`librechat-exporter-dashboard.json`](https://github.com/rubentalstra/librechat-prom-exporter/blob/main/librechat-exporter-dashboard.json). Import it directly to get a comprehensive overview of your LibreChat metrics.
+
+## What's inside
+
+- **User Activity** — active users, user-provider distribution.
+- **Key Metrics Overview** — counts for users, messages, conversations, transactions.
+- **Message & File Metrics** — token usage, plugin usage, file sizes.
+- **Session & Prompt Performance** — average session duration, prompt-group generations.
+- **Actions & Tools by Type** — bar charts for action and prompt counts, tool-call usage.
+- **Conversation & Transaction Insights** — average messages per conversation, transaction-cost breakdown, token sums.
+
+## How to import
+
+1. In Grafana: **Dashboards → New → Import**.
+2. Upload `librechat-exporter-dashboard.json` or paste its contents.
+3. Pick your Prometheus data source (the one configured to scrape the exporter — see [Prometheus & Grafana setup](./guides/prometheus-grafana)).
+4. Save.
+
+## Screenshots
+
+![Dashboard Overview](/img/dashboard/image_1.png)
+
+![User Activity Panel](/img/dashboard/image_2.png)
+
+![Key Metrics Overview](/img/dashboard/image_3.png)
+
+![Message & File Metrics Panel](/img/dashboard/image_4.png)
+
+![Transaction Insights Panel](/img/dashboard/image_5.png)
+
+:::tip[Want to contribute a dashboard?]
+Share your dashboard JSON via a PR — see [Ways to contribute](./contributing/ways-to-contribute#share-a-grafana-dashboard).
+:::

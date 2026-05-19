@@ -1,6 +1,34 @@
+# Build artifacts
 dist
-node_modules
 coverage
-*.md
+**/build
+
+# Dependencies
+node_modules
+**/node_modules
 package-lock.json
+
+# Hand-formatted markdown (don't let prettier mangle table alignment, etc.)
+*.md
+
+# Tooling
 .husky
+
+# Docusaurus generated content
+website/.docusaurus
+website/build
+
+# Lighthouse CI local run artifacts (lhci collect output).
+website/.lighthouseci
+**/.lighthouseci
+
+# Immutable release docs snapshots — frozen at the moment of release;
+# reformatting them retroactively would produce noisy diffs and break the
+# "same source for that version" invariant.
+website/versioned_docs
+website/versioned_sidebars
+
+# Binary assets
+assets/**/*.png
+assets/**/*.jpg
+website/static

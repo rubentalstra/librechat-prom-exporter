@@ -1,0 +1,9 @@
+.docusaurus/
+build/
+node_modules/
+.env
+.env.local
+.cache-loader
+
+# Lighthouse CI local run artifacts (lhci collect output).
+.lighthouseci/
