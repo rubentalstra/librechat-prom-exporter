@@ -94,16 +94,31 @@ This setup uses the prebuilt **LibreChat Prometheus Exporter** image from GitHub
 
 The following environment variables can be configured via the `.env` file (or your shell environment). Use the provided `.env.example` as a starting point.
 
-| Variable                    | Default                                          | Description                                                                                                                                                                                                                                                    |
-|-----------------------------|--------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MONGO_URI`                 | `mongodb://host.docker.internal:27017/librechat` | The connection string for your LibreChat MongoDB database.                                                                                                                                                                                                     |
-| `PORT`                      | `9087`                                           | The port on which the exporter will run and expose `/metrics`.                                                                                                                                                                                                 |
-| `REFRESH_INTERVAL`          | `30000`                                          | Interval in ms for the basic metrics scrape (cheap, runs often).                                                                                                                                                                                               |
-| `ADVANCED_REFRESH_INTERVAL` | `REFRESH_INTERVAL × 10`                          | Interval in ms for the advanced metrics scrape (heavy, runs separately so a slow advanced cycle doesn't block basic).                                                                                                                                          |
-| `MONGO_POOL_SIZE`           | `50`                                             | `maxPoolSize` passed to `mongoose.connect`.                                                                                                                                                                                                                    |
-| `LOG_TIMINGS`               | `false`                                          | When `true`, prints per-scrape and per-section timing lines to stdout. Per-section durations are also exposed as the `librechat_exporter_section_duration_seconds` histogram regardless of this flag. Accepts `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off`. |
-| `EMIT_PER_USER_METRICS`     | `false`                                          | When `true`, emits the three high-cardinality `email`-labeled metrics (see [Cardinality](#cardinality) below). Default off to protect large deployments.                                                                                                       |
-| `TENANT_ID`                 | _(unset)_                                        | When set, installs mongoose schema hooks that scope every aggregate / find / count query to the named tenant. Leave unset on single-tenant LibreChat installs (the default).                                                                                   |
+| Variable                         | Default                                          | Description                                                                                                                                                                                                                                                    |
+|----------------------------------|--------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MONGO_URI`                      | `mongodb://host.docker.internal:27017/librechat` | The connection string for your LibreChat MongoDB database.                                                                                                                                                                                                     |
+| `PORT`                           | `9087`                                           | The port on which the exporter will run and expose `/metrics`.                                                                                                                                                                                                 |
+| `REFRESH_INTERVAL`               | `30000`                                          | Interval in ms for the basic metrics scrape (cheap, runs often).                                                                                                                                                                                               |
+| `ADVANCED_REFRESH_INTERVAL`      | `REFRESH_INTERVAL × 10`                          | Interval in ms for the advanced metrics scrape (heavy, runs separately so a slow advanced cycle doesn't block basic).                                                                                                                                          |
+| `MONGO_POOL_SIZE`                | `50`                                             | `maxPoolSize` passed to `mongoose.connect`.                                                                                                                                                                                                                    |
+| `LOG_TIMINGS`                    | `false`                                          | When `true`, prints per-scrape and per-section timing lines to stdout. Per-section durations are also exposed as the `librechat_exporter_section_duration_seconds` histogram regardless of this flag. Accepts `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off`. |
+| `EMIT_PER_USER_METRICS`          | `false`                                          | When `true`, emits the three high-cardinality `email`-labeled metrics (see [Cardinality](#cardinality) below). Default off to protect large deployments.                                                                                                       |
+| `TENANT_ID`                      | _(unset)_                                        | When set, installs mongoose schema hooks that scope every aggregate / find / count query to the named tenant. Leave unset on single-tenant LibreChat installs (the default).                                                                                   |
+| `METRICS_PORT`                   | _(unset)_                                        | Optional second port for `/metrics` only. If set and different from `PORT`, `/metrics` binds there and `/health` stays on `PORT`. Useful for k8s sidecar / internal-only metrics scraping.                                                                     |
+| `TRUST_PROXY`                    | `loopback`                                       | Value passed to `app.set('trust proxy', ...)`. Set when running behind a reverse proxy so `req.ip` / IP allowlist see real clients. Accepts `true`, `false`, CIDR list, or `loopback`/`linklocal`/`uniquelocal`.                                               |
+| `RATE_LIMIT_WINDOW_MS`           | `60000`                                          | Per-IP rate limit window in ms.                                                                                                                                                                                                                                |
+| `RATE_LIMIT_MAX`                 | `120`                                            | Max requests per IP to `/metrics` per window.                                                                                                                                                                                                                  |
+| `HEALTH_RATE_LIMIT_MAX`          | `600`                                            | Max requests per IP to `/health` per window.                                                                                                                                                                                                                   |
+| `METRICS_BEARER_TOKEN`           | _(unset)_                                        | If set, `/metrics` requires `Authorization: Bearer <token>`. See [Auth](#auth-on-metrics).                                                                                                                                                                     |
+| `METRICS_BASIC_AUTH_USER`        | _(unset)_                                        | HTTP Basic username. Must be set together with `METRICS_BASIC_AUTH_PASSWORD`.                                                                                                                                                                                  |
+| `METRICS_BASIC_AUTH_PASSWORD`    | _(unset)_                                        | HTTP Basic password.                                                                                                                                                                                                                                           |
+| `METRICS_OAUTH2_ISSUER`          | _(unset)_                                        | OIDC issuer URL. Exporter discovers JWKS from `${issuer}/.well-known/openid-configuration` at boot. Mutually exclusive with `METRICS_OAUTH2_JWKS_URI`.                                                                                                         |
+| `METRICS_OAUTH2_JWKS_URI`        | _(unset)_                                        | Direct JWKS endpoint URL. Use when the IdP does not expose OIDC discovery.                                                                                                                                                                                     |
+| `METRICS_OAUTH2_AUDIENCE`        | _(unset)_                                        | Required if any `METRICS_OAUTH2_*` is set. The `aud` claim the exporter accepts.                                                                                                                                                                               |
+| `METRICS_OAUTH2_REQUIRED_SCOPES` | _(unset)_                                        | Space-separated scopes. Token must carry every listed scope in `scope` or `scp`.                                                                                                                                                                               |
+| `METRICS_OAUTH2_ALGORITHMS`      | `RS256,ES256`                                    | Comma-separated allowed JWT signing algorithms.                                                                                                                                                                                                                |
+| `METRICS_ALLOWED_IPS`            | _(unset)_                                        | Comma-separated CIDRs (IPv4 / IPv6). Requests outside the list are rejected with 403. Combine with a token method (both must pass) or use standalone.                                                                                                          |
+| `METRICS_AUTH_LOG_REJECTS`       | `true`                                           | Log auth rejections (rate-limited to ~1/sec). Set to `false` to silence.                                                                                                                                                                                       |
 
 Example `.env` file (generated by copying `.env.example`):
 ```
@@ -121,6 +136,78 @@ Three metrics carry an `email` label and emit one Prometheus series per user. On
 - `librechat_agent_usage_by_user_count{agent,email}`
 
 The corresponding `*_by_email_domain` variants are bounded by company domains and remain enabled by default.
+
+### Auth on `/metrics`
+
+`/metrics` is **publicly accessible by default**. The exporter ships with four optional auth methods that can be enabled via environment variables. Any combination is supported; the IP allowlist (if set) is enforced in addition to whichever token method authorizes the request.
+
+| Method              | Enable with                                                            | Prometheus / Alloy scrape side                            |
+|---------------------|------------------------------------------------------------------------|-----------------------------------------------------------|
+| Static bearer token | `METRICS_BEARER_TOKEN`                                                 | `authorization: { type: Bearer, credentials: <token> }`   |
+| HTTP Basic          | `METRICS_BASIC_AUTH_USER` + `METRICS_BASIC_AUTH_PASSWORD`              | `basic_auth: { username, password }`                      |
+| OAuth2 / OIDC JWT   | `METRICS_OAUTH2_{ISSUER,JWKS_URI,AUDIENCE,REQUIRED_SCOPES,ALGORITHMS}` | `oauth2: { client_id, client_secret, token_url, scopes }` |
+| IP allowlist        | `METRICS_ALLOWED_IPS` (comma-separated CIDRs)                          | _(network-layer; no scrape-side config)_                  |
+
+**Which method should I pick?**
+
+- **Static bearer token** — simplest; one secret, no IdP needed. Fine for small deployments and CI scrapers.
+- **HTTP Basic** — compatible with older Prometheus setups that prefer `basic_auth`. Behavior is equivalent to static bearer.
+- **OAuth2 / OIDC** — best for enterprise setups with an IdP (Keycloak, Auth0, Okta, Azure AD). Tokens rotate, scopes are enforced, secrets never leave the IdP. The exporter validates the JWT against the issuer's JWKS (cached for 10 min, with automatic key rotation).
+- **IP allowlist** — defense in depth. Pair with a token method to require both network and credential checks, or use standalone when network isolation is your only requirement.
+
+If none of the four env vars is set, `/metrics` stays open (current behavior, no breaking change).
+
+**Prometheus scrape examples**
+
+Static bearer:
+
+```yaml
+scrape_configs:
+  - job_name: 'librechat-exporter'
+    authorization:
+      type: Bearer
+      credentials: "your-shared-secret"
+    static_configs:
+      - targets: ['exporter:9087']
+```
+
+Basic auth:
+
+```yaml
+scrape_configs:
+  - job_name: 'librechat-exporter'
+    basic_auth:
+      username: prom
+      password: "your-password"
+    static_configs:
+      - targets: ['exporter:9087']
+```
+
+OAuth2 (client_credentials against your IdP):
+
+```yaml
+scrape_configs:
+  - job_name: 'librechat-exporter'
+    oauth2:
+      client_id: "prometheus"
+      client_secret: "your-client-secret"
+      token_url: "https://idp.example.com/realms/main/protocol/openid-connect/token"
+      scopes: ["metrics:read"]
+    static_configs:
+      - targets: ['exporter:9087']
+```
+
+The exporter side is then configured with:
+
+```bash
+METRICS_OAUTH2_ISSUER=https://idp.example.com/realms/main
+METRICS_OAUTH2_AUDIENCE=librechat-prom-exporter
+METRICS_OAUTH2_REQUIRED_SCOPES=metrics:read
+```
+
+**Grafana Alloy** uses the same primitives in its `prometheus.scrape` component (`basic_auth`, `authorization`, `oauth2` blocks). See the [Alloy `prometheus.scrape` reference](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.scrape/) and the [Prometheus `scrape_config` reference](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config).
+
+When running behind a reverse proxy, also set `TRUST_PROXY=true` (or a CIDR list) so the IP allowlist and rate limiter see real client IPs instead of the proxy.
 
 ## Usage
 
