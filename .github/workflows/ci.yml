@@ -93,3 +93,28 @@ jobs:
             depcheck_results.txt
             tsprune_results.txt
           if-no-files-found: ignore
+
+  # Build the Docker image on every PR so Dockerfile regressions surface
+  # at review time, not after merge when CD tries to publish. Single-arch
+  # for speed; CD covers linux/amd64+linux/arm64.
+  docker_build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: false
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

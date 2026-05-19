@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
+      packages: read # pull the published image for the weekly scan
+      security-events: write # upload weekly Trivy SARIF to Code Scanning
     # Hoist the secret into a job-level env so step `if:` conditions can
     # reference it. GitHub Actions does not allow `secrets.X` directly in
     # `if:` expressions — `env.X` is the supported pattern.
@@ -38,3 +40,36 @@ jobs:
 
       - name: List outdated dependencies (informational)
         run: npm outdated || true
+
+      # Weekly scan of the PUBLISHED image. Catches CVEs introduced after
+      # the last CD push (e.g., base-image rebuild, new Debian advisory).
+      # Results land in Security → Code scanning under category
+      # `trivy-image-weekly`, separate from CD-time `trivy-image` scans.
+      - name: Log in to GHCR for image pull
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull latest published image
+        run: docker pull ghcr.io/${{ github.repository }}:latest
+
+      - name: Scan published image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:latest
+          format: sarif
+          output: trivy-image-weekly.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          exit-code: "0"
+
+      - name: Upload weekly Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image-weekly.sarif
+          category: trivy-image-weekly
+        continue-on-error: true

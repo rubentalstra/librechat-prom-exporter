@@ -7,7 +7,8 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write # cosign keyless signing via Sigstore
+  id-token: write # cosign keyless signing via Sigstore + GitHub attestations
+  attestations: write # actions/attest-build-provenance + actions/attest-sbom
   security-events: write # upload-sarif posts to Code Scanning
 
 jobs:
@@ -86,6 +87,19 @@ jobs:
           provenance: false
           sbom: false
 
+      # SLSA build provenance via GitHub's native attestation framework.
+      # `push-to-registry: false` keeps the attestation in GitHub's
+      # attestation database (queryable via `gh attestation verify` and
+      # surfaced at https://github.com/<repo>/attestations) WITHOUT
+      # publishing it as an OCI manifest into GHCR — so it doesn't
+      # bloat the Packages page like buildx's `provenance: true` did.
+      - name: Generate SLSA build provenance attestation
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: false
+
       # Sign every published tag with Sigstore keyless cosign.
       # Verifiable downstream via:
       #   cosign verify --certificate-identity-regexp='https://github.com/<repo>/' \
@@ -137,6 +151,19 @@ jobs:
           format: spdx-json
           output-file: sbom.spdx.json
           upload-artifact: true
+
+      # Attest the SBOM via GitHub's native framework. Same logic as
+      # build-provenance above: `push-to-registry: false` keeps it out
+      # of GHCR's OCI manifest list. Consumers verify with:
+      #   gh attestation verify oci://ghcr.io/<repo>:latest \
+      #     --owner <owner> --predicate-type=https://spdx.dev/Document
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v4
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          sbom-path: sbom.spdx.json
+          push-to-registry: false
 
       - name: Attach SBOM to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
