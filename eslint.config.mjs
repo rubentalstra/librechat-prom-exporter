@@ -85,8 +85,10 @@ export default [
   ...compat
     .extends("plugin:@typescript-eslint/eslint-recommended", "plugin:@typescript-eslint/recommended")
     .map((config) => {
-      const { plugins, ...rest } = config;
-      return { ...rest, files: ["**/*.ts"] }; // note the trailing comma here
+      // Strip `plugins` from FlatCompat output — flat config expects plugins
+      // declared at the top-level config object, not on every imported block.
+      const { plugins: _plugins, ...rest } = config;
+      return { ...rest, files: ["**/*.ts"] };
     }),
   {
     files: ["**/*.ts"],
