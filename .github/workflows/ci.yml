@@ -1,9 +1,9 @@
 name: CI & Code Quality
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build_test:
@@ -17,25 +17,40 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22.x'
-          cache: 'npm'
+          node-version: "25.x"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint code with ESLint
-        run: npm run lint --if-present
+      - name: Lint
+        run: npm run lint
 
-      - name: TypeScript build (compile)
-        run: npm run build --if-present
+      - name: Format check
+        run: npm run format:check
 
-      - name: Run tests
-        run: npm run test --if-present
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Test (with coverage)
+        run: npm run test:coverage
+
+      - name: Upload coverage
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: ignore
 
   static_analysis:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      security-events: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -43,28 +58,33 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22.x'
-          cache: 'npm'
+          node-version: "25.x"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint and save results in SARIF
-        id: eslint
+      - name: Run ESLint (SARIF)
         run: |
-          npx eslint . --ext .ts --config eslint.config.mjs --format @microsoft/eslint-formatter-sarif --output-file eslint_results.sarif || true
+          npx eslint . --ext .ts --config eslint.config.mjs \
+            --format @microsoft/eslint-formatter-sarif \
+            --output-file eslint_results.sarif || true
 
-      - name: Run depcheck and save results
-        id: depcheck
-        run: |
-          npx depcheck > depcheck_results.txt || true
+      - name: Run depcheck
+        run: npx depcheck > depcheck_results.txt || true
 
-      - name: Run ts-prune and save results
-        id: tsprune
-        run: |
-          npx ts-prune > tsprune_results.txt || true
+      - name: Run ts-prune
+        run: npx ts-prune > tsprune_results.txt || true
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: eslint_results.sarif
+        continue-on-error: true
 
       - name: Upload Code Quality Artifacts
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: code-quality-results
@@ -72,3 +92,4 @@ jobs:
             eslint_results.sarif
             depcheck_results.txt
             tsprune_results.txt
+          if-no-files-found: ignore

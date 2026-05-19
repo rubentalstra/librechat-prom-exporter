@@ -1,16 +1,50 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "daily"
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Europe/Amsterdam
+    open-pull-requests-limit: 10
+    groups:
+      types:
+        patterns:
+          - "@types/*"
+      eslint:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "@typescript-eslint/*"
+          - "eslint-*"
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "nock"
+          - "supertest"
+          - "@types/supertest"
+          - "mongodb-memory-server"
 
-  - package-ecosystem: "docker"
-    directory: "/"
+  - package-ecosystem: docker
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Europe/Amsterdam
+    open-pull-requests-limit: 5
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Europe/Amsterdam
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns:
+          - "*"

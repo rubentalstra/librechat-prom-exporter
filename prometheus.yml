@@ -2,6 +2,6 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'librechat-exporter'
+  - job_name: "librechat-exporter"
     static_configs:
-      - targets: ['exporter:9087']
+      - targets: ["exporter:9087"]

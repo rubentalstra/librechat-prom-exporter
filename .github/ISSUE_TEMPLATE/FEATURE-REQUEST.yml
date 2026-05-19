@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thank you for taking the time to suggest an enhancement for LibreChat Prometheus Exporter!
-        
+
         Please describe the endpoints or metrics you feel are missing and how they would improve the project.
   - type: textarea
     id: what

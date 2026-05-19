@@ -1,10 +1,12 @@
-# Stage 1: Build the application
+# syntax=docker/dockerfile:1.7
+
+# Stage 1: Build TypeScript
 FROM node:25-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --prefer-offline --no-audit --silent
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts --prefer-offline --no-audit --silent
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -12,30 +14,56 @@ COPY src ./src
 RUN npm run build
 
 # Stage 2: Install production dependencies only
+# Uses the same uid as the runtime base (chainguard uid 65532) so the
+# files copied across already have correct ownership at runtime.
 FROM node:25-alpine AS deps
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
-RUN npm ci --only=production --prefer-offline --no-audit --silent && \
+RUN npm ci --omit=dev --ignore-scripts --prefer-offline --no-audit --silent && \
     npm cache clean --force && \
     rm -rf /tmp/* /var/cache/apk/* /root/.npm && \
-    find /app/node_modules -name "test" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/node_modules -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/node_modules -name "__tests__" -type d -exec rm -rf {} + 2>/dev/null || true
+    find /app/node_modules -name "test" -type d -prune -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/node_modules -name "tests" -type d -prune -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/node_modules -name "__tests__" -type d -prune -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/node_modules -name "*.test.js" -delete 2>/dev/null || true && \
+    find /app/node_modules -name "*.test.ts" -delete 2>/dev/null || true && \
+    find /app/node_modules -name "*.md" -delete 2>/dev/null || true && \
+    mkdir -p /app/logs && chown -R 65532:65532 /app
 
-FROM gcr.io/distroless/nodejs20-debian12
+# Stage 3: Chainguard hardened minimal Node runtime
+# Why Chainguard: their public images are rebuilt daily from source against
+# the latest upstream CVE fixes, so we don't sit on a distroless base whose
+# rebuild cadence trails Debian security patches by days/weeks. Currently
+# tracks Node 26.x.
+#
+# Image conventions:
+#   - default user: 65532 (nonroot)
+#   - entrypoint:   /usr/bin/node
+#   - no shell; HEALTHCHECK must use array-form invoking node directly
+FROM cgr.dev/chainguard/node:latest AS runtime
 
 WORKDIR /app
 
-COPY --from=builder /app/dist ./dist
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder --chown=65532:65532 /app/dist ./dist
+COPY --from=deps --chown=65532:65532 /app/node_modules ./node_modules
+COPY --from=deps --chown=65532:65532 /app/logs ./logs
+COPY --chown=65532:65532 package.json ./
 
-COPY package.json ./
+ENV NODE_ENV=production \
+    PORT=9087
 
 EXPOSE 9087
 
-USER 1001
+USER 65532
 
+# Chainguard's ENTRYPOINT is already /usr/bin/node, so HEALTHCHECK CMD
+# args become `node <args>`. Using array form keeps the shell out of the
+# picture (Chainguard's minimal image has no shell).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD ["/usr/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||9087)+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+
+# The base image's ENTRYPOINT is /usr/bin/node, so CMD is just the script.
 CMD ["dist/index.js"]
