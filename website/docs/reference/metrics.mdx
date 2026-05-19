@@ -1,0 +1,179 @@
+---
+title: Metrics
+description: All metrics exposed on /metrics, grouped by category.
+sidebar_position: 3
+---
+
+# Metrics reference
+
+Every metric exposed at `/metrics`, grouped by category. Type is one of `gauge`, `counter`, or `histogram`. Labels are listed in `{}` after the metric name.
+
+:::tip[How to read this]
+For exact emission code, click any metric name (or use the **View on GitHub** button on referenced code blocks). The Architecture page explains the two-tier scrape model — basic metrics refresh every 30 s, advanced every 5 min by default.
+:::
+
+## Basic metrics (cheap counts, 30 s refresh)
+
+Source: `src/metrics/basicMetrics.ts`.
+
+| Metric | Type | Description |
+| --- | --- | --- |
+| `librechat_user_count` | gauge | Total users (`User.countDocuments`). |
+| `librechat_action_count` | gauge | Total actions. |
+| `librechat_agent_count` | gauge | Total agents. |
+| `librechat_assistant_count` | gauge | Total assistants. |
+| `librechat_balance_count` | gauge | Total balance entries. |
+| `librechat_banner_count` | gauge | Total banners. |
+| `librechat_conversation_tag_count` | gauge | Total conversation tags. |
+| `librechat_conversation_count` | gauge | Total conversations. |
+| `librechat_file_count` | gauge | Total files. |
+| `librechat_key_count` | gauge | Total API keys stored. |
+| `librechat_message_count` | gauge | Total messages. |
+| `librechat_plugin_auth_count` | gauge | Total plugin-auth entries. |
+| `librechat_preset_count` | gauge | Total presets. |
+| `librechat_prompt_group_count` | gauge | Total prompt groups. |
+| `librechat_prompt_count` | gauge | Total prompts. |
+| `librechat_session_count` | gauge | Total sessions. |
+| `librechat_shared_link_count` | gauge | Total shared links. |
+| `librechat_token_count` | gauge | Total token records. |
+| `librechat_tool_call_count` | gauge | Total tool calls. |
+| `librechat_transaction_count` | gauge | Total transactions. |
+
+## Advanced metrics (heavy aggregations, 5 min refresh)
+
+Source: `src/metrics/advancedMetrics.ts`. ~60 metrics grouped here.
+
+### Users
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_active_user_count` | gauge | — | Distinct users active in the last 5 minutes. |
+| `librechat_unique_user_count_1d` | gauge | — | Distinct users active in the last 1 day. |
+| `librechat_unique_user_count_7d` | gauge | — | Distinct users active in the last 7 days. |
+| `librechat_unique_user_count_30d` | gauge | — | Distinct users active in the last 30 days. |
+| `librechat_active_user_count_by_domain` | gauge | `email_domain` | Active users (5 min) bucketed by email domain. |
+| `librechat_unique_user_count_1d_by_domain` / `_7d_by_domain` / `_30d_by_domain` | gauge | `email_domain` | Same buckets at the 1/7/30-day windows. |
+| `librechat_user_count_by_email_domain` | gauge | `email_domain` | Total users grouped by email domain. |
+| `librechat_user_count_by_role` | gauge | `role` | Users by role (`admin`, `user`, …). |
+| `librechat_user_email_verified_percent` | gauge | — | Percentage of users with verified emails. |
+| `librechat_user_provider_count` | gauge | `provider` | Users by auth provider (`google`, `github`, `local`, …). |
+| `librechat_new_users_30d` | gauge | — | Users created in the last 30 days. |
+
+### Messages, tokens, and feedback
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_message_token_sum` | gauge | — | Sum of `tokenCount` across all messages. |
+| `librechat_message_token_avg` | gauge | — | Average `tokenCount` per message. |
+| `librechat_error_message_count` | gauge | — | Messages flagged with `error: true`. |
+| `librechat_message_with_attachments_count` | gauge | — | Messages with non-empty `attachments`. |
+| `librechat_message_plugin_usage_percent` | gauge | — | Percentage of messages that invoked a plugin. |
+| `librechat_message_feedback_thumbs_up_count` | gauge | `tag`, `model` | Thumbs-up feedback grouped by `feedback.tag` and `model`. |
+| `librechat_message_feedback_thumbs_down_count` | gauge | `tag`, `model` | Thumbs-down equivalent. |
+| `librechat_feedback_count_by_tag` | gauge | `tag`, `rating` | Feedback counts ignoring model. |
+| `librechat_feedback_count_by_domain_30d` | gauge | `email_domain`, `rating` | Feedback by user-domain over the last 30 days. |
+
+### Conversations
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_conversation_length_p50` / `_p90` / `_p95` | gauge | — | Conversation-message-count percentiles. Requires Mongo 7.0+ ([troubleshooting](../guides/troubleshooting)). |
+| `librechat_conversation_duration_avg` | gauge | — | Average lifetime of a conversation (created-to-last-message). |
+| `librechat_conversation_message_avg` | gauge | — | Average messages per conversation. |
+| `librechat_unfinished_message_count` | gauge | — | Messages marked `unfinished`. |
+
+### Transactions / costs / tokens
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_transaction_token_sum` | gauge | — | Sum of token usage across all transactions. |
+| `librechat_transaction_token_avg` | gauge | — | Average tokens per transaction. |
+| `librechat_transaction_cost_24h` / `_7d` / `_30d` | gauge | — | Total USD cost across rolling windows. |
+| `librechat_transaction_cost_total_usd` | gauge | — | Lifetime total USD cost. |
+| `librechat_transaction_cost_sum` | gauge | `tokenType` | Cost summed per token type (`prompt`, `completion`). |
+| `librechat_transaction_cost_avg` | gauge | `tokenType` | Average cost per token type. |
+| `librechat_transaction_cost_per_model` | gauge | `model` | Cost per model. |
+| `librechat_transaction_cost_by_email_domain` | gauge | `email_domain` | Cost grouped by user's email domain. |
+| `librechat_transaction_cost_by_agent` | gauge | `agent` | Cost grouped by agent. |
+| `librechat_cost_per_conversation_avg` | gauge | — | Average cost per conversation (denominator uses `countDocuments` so it's tenant-aware). |
+| `librechat_transaction_token_sum_by_model_email_domain` | gauge | `model`, `tokenType`, `email_domain` | Per-domain token usage. |
+| **High-cardinality (gated)** | | | |
+| `librechat_transaction_cost_by_user` | gauge | `email` | Only emitted when `EMIT_PER_USER_METRICS=true`. |
+| `librechat_transaction_token_sum_by_model_user` | gauge | `model`, `tokenType`, `email` | Same gate. |
+
+### Agents / assistants / tools
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_agent_usage_count` | gauge | `agent` | Agent invocation count. |
+| `librechat_agent_unique_users_count` | gauge | `agent` | Distinct users per agent (lifetime). |
+| `librechat_agent_unique_users_30d` | gauge | `agent` | Distinct users per agent in last 30 days. |
+| `librechat_agent_last_used_age_seconds` | gauge | `agent` | Seconds since most recent use. |
+| `librechat_agent_avg_messages_per_use` | gauge | `agent` | Average messages per conversation, by agent. |
+| `librechat_agent_creation_count_by_user_domain` | gauge | `email_domain` | Agents created, grouped by author domain. |
+| `librechat_agent_usage_by_domain_count` | gauge | `agent`, `email_domain` | Usage count per agent + user domain. |
+| `librechat_agent_usage_by_user_count` | gauge | `agent`, `email` | Gated by `EMIT_PER_USER_METRICS=true`. |
+| `librechat_assistant_usage_count` | gauge | `assistant` | Assistant invocation count. |
+| `librechat_model_usage_count` | gauge | `model` | Per-model message count. |
+| `librechat_tool_call_count_by_tool` | gauge | `toolId` | Tool-call counts. |
+| `librechat_tool_call_avg_latency_seconds` | gauge | `toolId` | Average tool-call latency. |
+
+### MCP (Model Context Protocol)
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_mcp_tool_call_count_30d` | gauge | — | Total MCP tool calls in last 30 days. |
+| `librechat_mcp_unique_users_by_tool_30d` | gauge | `toolId` | Distinct users per MCP tool. |
+| `librechat_mcp_tool_call_by_user_domain_30d` | gauge | `toolId`, `email_domain` | Per-tool, per-domain breakdown. |
+
+### Files
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_file_count_by_type` | gauge | `type` | Files grouped by MIME type. |
+| `librechat_file_total_bytes` | gauge | — | Sum of `bytes` across all files. |
+| `librechat_file_avg_bytes` | gauge | — | Average file size. |
+| `librechat_file_size_p50_bytes` / `_p95_bytes` | gauge | — | File-size percentiles. Requires Mongo 7.0+. |
+| `librechat_file_bytes_by_user_domain` | gauge | `email_domain` | Total bytes uploaded, by user domain. |
+| `librechat_file_upload_count_24h` / `_7d` | gauge | — | Recent upload counts. |
+
+### Sessions, prompts, banners
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_session_avg_duration` | gauge | — | Average session duration (seconds). |
+| `librechat_session_active_count` | gauge | — | Sessions whose `expiration` is in the future. |
+| `librechat_session_expired_count_24h` | gauge | — | Sessions expired in the last 24h. |
+| `librechat_prompt_group_count_by_category` | gauge | `category` | Prompt groups by category. |
+| `librechat_prompt_count_by_type` | gauge | `type` | Prompts by type. |
+| `librechat_shared_link_count_24h` | gauge | — | Shared links created in last 24h. |
+| `librechat_conversation_tag_usage_count` | gauge | `tag` | Per-tag conversation count. |
+| `librechat_active_banner_count` | gauge | — | Banners currently displayed (between `displayFrom` / `displayTo`). |
+
+### Adoption & periodicity
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_adoption_rate_7d` | gauge | — | Percentage of recently-created users who returned within 7 days. |
+| `librechat_adoption_rate_30d` | gauge | — | Same, 30-day window. |
+| `librechat_periodicity_daily` | gauge | — | Average active days per user per week (last 30 d). |
+| `librechat_periodicity_weekly` | gauge | — | Average active weeks per user per month (last 30 d). |
+| `librechat_periodicity_monthly` | gauge | — | Average active months per user (lifetime). |
+| `librechat_messages_by_hour_of_day` | gauge | `hour` | Message volume per hour-of-day bucket. |
+| `librechat_messages_by_weekday` | gauge | `weekday` | Message volume per weekday. |
+| `librechat_power_users_count_30d` | gauge | `tier` | Distinct users in each "messages sent" tier (e.g. `1-10`, `10-100`, …). |
+
+### Exporter-self metrics
+
+These describe the exporter itself, not LibreChat. Always emitted.
+
+| Metric | Type | Labels | Notes |
+| --- | --- | --- | --- |
+| `librechat_exporter_mongo_connected` | gauge | — | `1` when mongoose `readyState === 1`, else `0`. |
+| `librechat_exporter_scrape_duration_seconds` | gauge | `metric_group` | Duration of last successful scrape per tier (`basic`, `advanced`). |
+| `librechat_exporter_scrape_errors_total` | counter | `metric_group` | Cumulative scrape errors per tier. |
+| `librechat_exporter_last_successful_scrape_timestamp` | gauge | `metric_group` | Unix timestamp of last success per tier. |
+| `librechat_exporter_section_duration_seconds` | histogram | `section` | Per-section timings inside advanced (e.g. `User map loaded`, `Transaction Cost Metrics`). Trailing parentheticals are stripped to keep cardinality bounded. |
+| `librechat_exporter_missing_indexes` | gauge | `collection`, `key` | `1` when a recommended index is absent on a collection. Asserted at boot from `src/metrics/indexAssertions.ts`. |
+
+Plus the [`prom-client` default metrics](https://github.com/siimon/prom-client#default-metrics) (`process_*`, `nodejs_*`).

@@ -1,0 +1,79 @@
+---
+title: Environment variables
+description: Every environment variable the exporter reads, what it does, and its default.
+sidebar_position: 1
+---
+
+# Environment variables
+
+All settings are read from environment variables at boot. The exporter uses [zod](https://github.com/colinhacks/zod) to validate them and fails fast with a clear error if anything is invalid. Provide them via a `.env` file (loaded by `dotenv`) or your container runtime.
+
+## Core
+
+| Variable                    | Default                                          | Description                                                                                                                                                                                                                   |
+|-----------------------------|--------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MONGO_URI`                 | `mongodb://host.docker.internal:27017/librechat` | Connection string for your LibreChat MongoDB database.                                                                                                                                                                        |
+| `PORT`                      | `9087`                                           | The port on which the exporter runs and exposes `/metrics`.                                                                                                                                                                   |
+| `MONGO_POOL_SIZE`           | `50`                                             | `maxPoolSize` passed to `mongoose.connect`.                                                                                                                                                                                   |
+| `REFRESH_INTERVAL`          | `30000`                                          | Interval in ms for the **basic** metrics scrape (cheap, runs often).                                                                                                                                                          |
+| `ADVANCED_REFRESH_INTERVAL` | `REFRESH_INTERVAL × 10`                          | Interval in ms for the **advanced** metrics scrape (heavy `$facet` aggregations, runs on a separate timer so a slow advanced cycle never blocks basic).                                                                       |
+| `LOG_TIMINGS`               | `false`                                          | When `true`, prints per-scrape and per-section timing logs. Per-section durations are always exposed as the `librechat_exporter_section_duration_seconds` histogram regardless. Accepts `true` or `false` (case-insensitive). |
+
+## Cardinality and tenancy
+
+| Variable                | Default   | Description                                                                                                                                                                                 |
+|-------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `EMIT_PER_USER_METRICS` | `false`   | When `true`, emits three high-cardinality `email`-labeled metrics — one Prometheus series per user. **Off by default** to protect large deployments. See [Cardinality](#cardinality) below. |
+| `TENANT_ID`             | _(unset)_ | When set, installs mongoose schema hooks that scope every aggregate / find / count query to the named tenant. Leave unset on single-tenant LibreChat installs (the default).                |
+
+## HTTP server hardening
+
+| Variable                | Default    | Description                                                                                                                                                                                                                    |
+|-------------------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `METRICS_PORT`          | _(unset)_  | Optional second port for `/metrics` only. If set and different from `PORT`, `/metrics` binds there and `/health` stays on `PORT`. Useful for k8s sidecar / internal-only metrics scraping.                                     |
+| `TRUST_PROXY`           | `loopback` | Value passed to `app.set('trust proxy', ...)`. Set when running behind a reverse proxy so `req.ip` (and the IP allowlist) see real clients. Accepts `true`, `false`, a CIDR list, or `loopback` / `linklocal` / `uniquelocal`. |
+| `RATE_LIMIT_WINDOW_MS`  | `60000`    | Per-IP rate-limit window in ms.                                                                                                                                                                                                |
+| `RATE_LIMIT_MAX`        | `120`      | Max requests per IP to `/metrics` per window.                                                                                                                                                                                  |
+| `HEALTH_RATE_LIMIT_MAX` | `600`      | Max requests per IP to `/health` per window.                                                                                                                                                                                   |
+
+## Auth (all optional)
+
+See the [Auth reference](./auth) for the full guide. Summary:
+
+| Variable                         | Default       | Description                                                                                                                                            |
+|----------------------------------|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `METRICS_BEARER_TOKEN`           | _(unset)_     | Static bearer token. If set, `/metrics` requires `Authorization: Bearer <token>`.                                                                      |
+| `METRICS_BASIC_AUTH_USER`        | _(unset)_     | HTTP Basic username. Must be set together with `METRICS_BASIC_AUTH_PASSWORD`.                                                                          |
+| `METRICS_BASIC_AUTH_PASSWORD`    | _(unset)_     | HTTP Basic password.                                                                                                                                   |
+| `METRICS_OAUTH2_ISSUER`          | _(unset)_     | OIDC issuer URL. Exporter discovers JWKS from `${issuer}/.well-known/openid-configuration` at boot. Mutually exclusive with `METRICS_OAUTH2_JWKS_URI`. |
+| `METRICS_OAUTH2_JWKS_URI`        | _(unset)_     | Direct JWKS endpoint URL. Use when the IdP does not expose OIDC discovery.                                                                             |
+| `METRICS_OAUTH2_AUDIENCE`        | _(unset)_     | Required if any `METRICS_OAUTH2_*` is set. The `aud` claim the exporter accepts.                                                                       |
+| `METRICS_OAUTH2_REQUIRED_SCOPES` | _(unset)_     | Space-separated scopes. Token must carry every listed scope in `scope` or `scp`.                                                                       |
+| `METRICS_OAUTH2_ALGORITHMS`      | `RS256,ES256` | Comma-separated allowed JWT signing algorithms.                                                                                                        |
+| `METRICS_ALLOWED_IPS`            | _(unset)_     | Comma-separated CIDRs (IPv4 / IPv6). Requests outside the list are rejected with 403. Combine with a token method (both must pass) or use standalone.  |
+| `METRICS_AUTH_LOG_REJECTS`       | `true`        | Log auth rejections (rate-limited to ~1/sec). Set to `false` to silence.                                                                               |
+
+## Example `.env`
+
+```bash
+MONGO_URI=mongodb://my-mongo-host:27017/librechat
+PORT=9087
+ADVANCED_REFRESH_INTERVAL=300000
+EMIT_PER_USER_METRICS=false
+```
+
+## Cardinality
+
+:::warning[Why this matters]
+Prometheus charges (and slows down) per **unique label combination**, not per metric. Adding a label with many possible values (like `email`) creates one time series per value — easily tens of thousands on a busy LibreChat install.
+:::
+
+Three metrics carry an `email` label and emit one Prometheus series per user. On large deployments this grows unbounded, so they are gated behind `EMIT_PER_USER_METRICS=true`:
+
+- `librechat_transaction_cost_by_user{email}`
+- `librechat_transaction_token_sum_by_model_user{model,tokenType,email}`
+- `librechat_agent_usage_by_user_count{agent,email}`
+
+The corresponding `*_by_email_domain` variants are bounded by company-domain count and remain enabled by default.
+
+See the [Adding a metric](../contributing/adding-a-metric) playbook for the cardinality budget rules new metrics should follow.

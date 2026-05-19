@@ -1,0 +1,117 @@
+name: Prepare release
+
+# Manually-triggered workflow that snapshots the docs site and bumps the
+# package.json version, then opens a PR. This is the single source of
+# truth for cutting a new release — no more manual steps to forget.
+#
+# How to use:
+#   1. Actions tab -> "Prepare release" -> Run workflow.
+#   2. Enter the new version (e.g. "0.9.0", without leading "v").
+#   3. The workflow opens a PR titled "Release v0.9.0" that contains:
+#        - website/versioned_docs/version-0.9/        (snapshot of docs/)
+#        - website/versioned_sidebars/version-0.9-sidebars.json
+#        - website/versions.json (with "0.9" prepended)
+#        - package.json + package-lock.json bumped to 0.9.0
+#   4. Review the PR. Merge it.
+#   5. Tag the merge commit + push:
+#        git fetch origin main
+#        git tag v0.9.0 origin/main
+#        git push origin v0.9.0
+#      (Or: GitHub UI -> Releases -> Draft a new release -> tag v0.9.0 on
+#      main -> Generate release notes -> Publish.)
+#   6. CD takes over: multi-arch build, cosign sign, attest build-provenance
+#      + SBOM, Trivy scan, attach SBOM to the Release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (semver, no leading 'v'). E.g. 0.9.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Validate version input
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+            echo "Invalid version '$VERSION'. Expected semver like 0.9.0 or 0.9.0-rc.1." >&2
+            exit 1
+          fi
+          MAJOR_MINOR="${VERSION%.*}"
+          echo "MAJOR_MINOR=$MAJOR_MINOR" >> "$GITHUB_ENV"
+          echo "Major.minor: $MAJOR_MINOR"
+
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: "npm"
+
+      - name: Bump root package.json
+        run: |
+          set -euo pipefail
+          npm version --no-git-tag-version "$VERSION"
+
+      - name: Snapshot docs site
+        working-directory: website
+        run: |
+          set -euo pipefail
+          npm ci
+          if [ -d "versioned_docs/version-${MAJOR_MINOR}" ]; then
+            echo "Snapshot version-${MAJOR_MINOR} already exists; skipping."
+          else
+            npm run docusaurus -- docs:version "$MAJOR_MINOR"
+          fi
+
+      - name: Open release PR
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: release/v${{ inputs.version }}
+          base: main
+          commit-message: "chore(release): v${{ inputs.version }}"
+          title: "Release v${{ inputs.version }}"
+          body: |
+            Automated release-prep PR for **v${{ inputs.version }}**.
+
+            What this PR does:
+            - Snapshots the docs site as version `${{ env.MAJOR_MINOR }}` (no-op if the snapshot already exists).
+            - Bumps `package.json` + `package-lock.json` to `${{ inputs.version }}`.
+
+            ### Reviewer checklist
+
+            - [ ] `package.json` version bumped correctly
+            - [ ] `website/versioned_docs/version-${{ env.MAJOR_MINOR }}/` populated
+            - [ ] `website/versions.json` includes `"${{ env.MAJOR_MINOR }}"`
+            - [ ] CI green (typecheck, tests, docs build, Lighthouse)
+
+            ### After merging
+
+            Tag the merge commit and push it:
+
+            ```bash
+            git fetch origin main
+            git tag v${{ inputs.version }} origin/main
+            git push origin v${{ inputs.version }}
+            ```
+
+            Or use the GitHub UI: **Releases → Draft a new release → tag `v${{ inputs.version }}` on `main` → Generate release notes → Publish.**
+
+            CD will then run automatically: multi-arch build, cosign sign, attest build-provenance + SBOM, Trivy scan, attach SBOM to the Release.
+          labels: |
+            release
+          delete-branch: true

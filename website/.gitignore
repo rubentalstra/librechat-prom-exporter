@@ -1,0 +1,6 @@
+.docusaurus/
+build/
+node_modules/
+.env
+.env.local
+.cache-loader

@@ -1,0 +1,48 @@
+name: Lighthouse on docs
+
+# PR-only Lighthouse run. Builds the Docusaurus site, runs Lighthouse
+# against the static build (served by treosh action's built-in server),
+# enforces a11y >= 90 and SEO >= 90 as errors; perf and best-practices
+# >= 85 as warnings. Posts the full report to a temporary public
+# storage and adds a comment with the link.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "website/**"
+      - ".github/workflows/docs-lighthouse.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    name: Audit
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: "npm"
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: "./website/lighthouserc.json"
+          uploadArtifacts: true
+          temporaryPublicStorage: true

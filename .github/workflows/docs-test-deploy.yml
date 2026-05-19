@@ -1,0 +1,43 @@
+name: Test docs build
+
+# PR-only verification: builds the Docusaurus site but doesn't deploy.
+# Catches broken markdown links, invalid frontmatter, and broken Mermaid
+# diagrams before they reach main.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "website/**"
+      - "CONTRIBUTING.md"
+      - ".github/workflows/docs-test-deploy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test-build:
+    name: Test build
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: "npm"
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

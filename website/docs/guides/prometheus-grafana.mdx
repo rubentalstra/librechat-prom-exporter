@@ -1,0 +1,57 @@
+---
+title: Prometheus & Grafana setup
+description: Configuring Prometheus to scrape the exporter and Grafana to visualize the results.
+sidebar_position: 1
+---
+
+# Prometheus & Grafana setup
+
+The exporter is just an HTTP endpoint; Prometheus does the scraping and Grafana does the visualization.
+
+## Prometheus
+
+Add a `scrape_configs` entry pointing at the exporter:
+
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'librechat-exporter'
+    static_configs:
+      - targets: ['exporter:9087']
+```
+
+If the exporter has [auth](../reference/auth) enabled, add the matching block (`authorization`, `basic_auth`, or `oauth2`).
+
+`scrape_interval: 15s` is the default Prometheus interval — you do **not** need to match it to the exporter's `REFRESH_INTERVAL` or `ADVANCED_REFRESH_INTERVAL`. The exporter caches the last-computed values; Prometheus just reads whatever is current at scrape time. Setting a Prometheus scrape interval much shorter than 15 s is wasteful since values don't update faster than the exporter's own loops.
+
+## Grafana
+
+Two paths:
+
+### Import the bundled dashboard
+
+The repository ships a sample `librechat-exporter-dashboard.json`. In Grafana:
+
+1. **Dashboards → New → Import**.
+2. Upload `librechat-exporter-dashboard.json` or paste its contents.
+3. Pick your Prometheus data source.
+4. Save.
+
+See the [Grafana dashboard](../dashboard) page for screenshots and what's inside.
+
+### Build your own
+
+Every metric is documented on the [Metrics reference](../reference/metrics). Use those names directly in Grafana panel queries — e.g.:
+
+```promql
+# Cost in the last 24 hours
+librechat_transaction_cost_24h
+
+# Messages per second over a 5-minute window
+rate(librechat_message_count[5m])
+
+# Adoption rate trend
+librechat_adoption_rate_30d
+```

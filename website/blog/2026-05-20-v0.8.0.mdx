@@ -1,0 +1,62 @@
+---
+slug: v0.8.0
+title: v0.8.0 — Hardening release
+authors: [rubentalstra]
+tags: [release]
+date: 2026-05-20
+---
+
+v0.8.0 is a major hardening release rolling up four merged integration PRs. Every layer of the project — metrics correctness, HTTP server, container, CI/CD, docs — got polish. No breaking changes for default-config deployments; auth and tenant scoping remain opt-in.
+
+{/* truncate */}
+
+### Metrics correctness & performance
+
+- **Tenant-leak fix**: `Conversation.estimatedDocumentCount()` (which is tenant-blind by design) was replaced with `countDocuments({})` so the tenant hook applies. Fixes inflated `librechat_cost_per_conversation_avg` for multi-tenant installs.
+- **6× redundant `$lookup` against `users` eliminated** — all six places now use the pre-loaded `userIdToEmail` map. Material advanced-scrape speedup on large installs.
+- **`allowDiskUse: true`** added to every `$facet` / `$group` that touches the full `messages` or `transactions` collection. Prevents Mongo's 100 MB in-memory aggregation limit from biting on real LibreChat installs.
+- **Index assertions** extended: now warns on missing recommended indexes for `messages.createdAt`, `messages.{isCreatedByUser,createdAt}`, `files.user`, `transactions.user`, `transactions.conversationId`.
+
+### HTTP hardening + optional auth
+
+- **`helmet`** applied with sensible defaults (no CSP since `/metrics` returns text, no CORP).
+- **`compression`** middleware — significant payload reduction on `/metrics`.
+- **`express-rate-limit`** with separate per-IP limiters for `/metrics` (default 120/min) and `/health` (600/min).
+- **`/metrics` auth** — four optional methods, all off by default: static bearer (`METRICS_BEARER_TOKEN`), HTTP Basic (`METRICS_BASIC_AUTH_USER` + `METRICS_BASIC_AUTH_PASSWORD`), OAuth2/OIDC JWT (`METRICS_OAUTH2_*`), IP allowlist (`METRICS_ALLOWED_IPS`). Constant-time comparison; rate-limited reject logging. See [Auth](/docs/reference/auth).
+- **`METRICS_PORT`** — optionally bind `/metrics` on a separate port so it can be internal-only while `/health` stays public-reachable.
+
+### Tooling foundation
+
+- **`pino`** structured logging — every `console.*` call swapped for the singleton logger. Pretty in dev, JSON in prod.
+- **`zod`** env validation — every env var schema-checked at boot. Misconfig fails fast with a clear list of issues. Replaces ad-hoc `parseInt` and `envFlag`.
+- **`vitest`** + 46 tests across `config`, `util`, `tenantHooks`, `metricsAuth`. JWT signing + JWKS mocking via `nock` for the OAuth2 path.
+- **`prettier`** + **`husky`** + **`lint-staged`** for consistent style and pre-commit hooks.
+- **tsconfig modernization**: `target: ES2023`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`, `sourceMap: true`.
+
+### Container + CI/CD
+
+- **Base image**: distroless → **Chainguard `cgr.dev/chainguard/node:latest`**. Daily rebuilds against the latest CVE fixes; currently zero CRITICAL/HIGH CVEs at every severity.
+- **OCI labels + annotations** via `docker/metadata-action` — description, vendor, source, license, documentation all visible on the GHCR Packages page (no more "No description provided").
+- **SLSA build provenance** + **SBOM attestation** via GitHub's native framework (`actions/attest-build-provenance@v4` + `actions/attest-sbom@v4`). `push-to-registry: false` so they live in GitHub's attestation DB and don't clutter GHCR. Verifiable with `gh attestation verify oci://...`.
+- **`cosign` keyless signing** of every published tag via Sigstore.
+- **Multi-arch-safe cleanup workflow** — `actions/delete-package-versions@v5` is not manifest-aware (known upstream bugs); replaced with `dataaxiom/ghcr-cleanup-action@v1` which understands manifest lists, cosign signatures, and attestation referrers.
+- **Weekly Trivy scan** of the published `:latest` — catches CVEs introduced after publish (base-image regression, new Debian advisories) and reports them to GitHub Code Scanning.
+- **PR-time `docker build`** added to CI so Dockerfile regressions surface at review time, not after merge.
+
+### Docs site
+
+This release ships with a full Docusaurus docs site at **[rubentalstra.github.io/librechat-prom-exporter](https://rubentalstra.github.io/librechat-prom-exporter/)**:
+
+- Versioned per release (use the version dropdown in the navbar).
+- Local search (no Algolia signup needed).
+- New [Architecture](/docs/contributing/architecture) deep-dive with Mermaid diagrams of the scrape pipeline and auth decision tree.
+- [Adding a metric](/docs/contributing/adding-a-metric) playbook with cardinality budget rules.
+- README slimmed from 343 → ~50 lines.
+
+### Upgrading
+
+- `docker pull ghcr.io/rubentalstra/librechat-prom-exporter:0.8.0`. No env-var changes needed for existing deployments.
+- New env vars are all opt-in: see [Environment variables](/docs/reference/environment-variables).
+- Lighthouse CI on the docs site enforces a11y ≥ 90 and SEO ≥ 90 going forward.
+
+Thanks to everyone who reported issues during the integration PRs.

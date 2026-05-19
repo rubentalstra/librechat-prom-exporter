@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://rubentalstra.github.io/librechat-prom-exporter/
+    about: Installation, configuration, troubleshooting, and metrics reference.
+  - name: 💬 GitHub Discussions
+    url: https://github.com/rubentalstra/librechat-prom-exporter/discussions
+    about: Ask "how do I..." or share usage tips. Faster than an issue.
+  - name: 🔐 Report a security vulnerability
+    url: https://github.com/rubentalstra/librechat-prom-exporter/security/advisories/new
+    about: Use the private security advisory flow — never a public issue.

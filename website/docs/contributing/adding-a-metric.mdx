@@ -1,0 +1,173 @@
+---
+title: Adding a metric
+description: Step-by-step playbook for adding a new metric — tier selection, cardinality budget, code placement, tests, docs.
+sidebar_position: 4
+---
+
+# Adding a metric
+
+The most common code contribution. Follow this playbook end-to-end and the PR review will be a few comments instead of a re-architecture.
+
+:::tip[Read Architecture first]
+This page assumes you've read [Architecture](./architecture) — especially the two-tier scrape model, the in-JS join pattern (`userIdToEmail` map), and the cardinality gates.
+:::
+
+## 1. Decide the tier
+
+| Question | Tier |
+| --- | --- |
+| Is it a single `countDocuments` with no `$match`? | **Basic** (`src/metrics/basicMetrics.ts`) |
+| Is it a `countDocuments` with a small `$match` (e.g. `{ error: true }`)? | Either — basic if the filter is index-served and the count matters every 30 s; advanced otherwise |
+| Does it use `aggregate(...)`, `$facet`, `distinct`, `find().lean()` and group in JS? | **Advanced** (`src/metrics/advancedMetrics.ts`) |
+| Does it reference data the advanced scrape has already loaded (`userIdToEmail`, `convIdToAgentId`)? | **Advanced**, after the map load |
+
+When in doubt, go advanced — the advanced scrape's 5-min cadence is the right place for anything that can't complete in well under a second.
+
+## 2. Cardinality budget {/* #cardinality-budget */}
+
+Every label adds a series per unique value. The budget rules:
+
+| Label values | Allowed? | Notes |
+| --- | --- | --- |
+| Bounded enums (`role`, `provider`, `tokenType`, `hour`, `weekday`) | ✅ always on | Effectively single-digit cardinality. |
+| Per-model / per-agent / per-tool | ✅ always on | A LibreChat install rarely has more than a few hundred. |
+| Per-email-domain | ✅ always on | Bounded by company domains in your user base. |
+| Per-user (`email`) | ❌ gated by `EMIT_PER_USER_METRICS` | Unbounded in user count. |
+| Per-message-ID / per-conversation-ID | ❌ never | Unbounded; would not fit in any Prometheus instance. |
+
+If your metric needs an `email` label, you must:
+
+1. Also emit the `_by_email_domain` variant (always on).
+2. Guard the per-user emission with `if (emitPerUser()) { ... }`.
+
+See existing examples: `transactionCostByUser` / `transactionCostByEmailDomain` in `advancedMetrics.ts`.
+
+## 3. Add the gauge declaration
+
+Top of `basicMetrics.ts` or `advancedMetrics.ts`, depending on tier:
+
+```ts reference
+https://github.com/rubentalstra/librechat-prom-exporter/blob/main/src/metrics/basicMetrics.ts#L1-L40
+```
+
+Pattern (for a new gauge in `basicGauges` / `advancedGauges`):
+
+```ts
+myNewMetric: new client.Gauge({
+  name: "librechat_my_new_metric",
+  help: "What it measures, units, time window if any.",
+  labelNames: ["agent", "tokenType"], // omit for unlabeled
+}),
+```
+
+Naming conventions:
+
+- `librechat_` prefix on everything (already enforced visually; not technical).
+- `snake_case` per Prometheus convention.
+- Suffix with the unit if non-obvious: `_bytes`, `_seconds`, `_total` (for counters), `_percent`.
+- For windowed metrics: `_24h`, `_7d`, `_30d`.
+- For "by"-grouped metrics: `_by_<dimension>` (e.g. `_by_email_domain`).
+
+## 4. Wire up the scrape
+
+### Basic-tier example
+
+In `updateBasicMetrics()` inside the `Promise.all`:
+
+```ts
+const [..., myNewCount] = await Promise.all([
+  // ...existing counts...
+  MyModel.countDocuments({ /* filter */ }),
+]);
+
+basicGauges.myNewMetric.set(myNewCount);
+```
+
+### Advanced-tier example
+
+Pick a section, set up a `__mark` boundary, run the aggregation, and consume the result:
+
+```ts
+__mark("My new section");
+
+const myAgg = await Message.aggregate(
+  [
+    { $match: { /* filter */ } },
+    { $group: { _id: "$dimension", count: { $sum: 1 } } },
+  ],
+  { allowDiskUse: true }, // ← required for full-collection groups
+);
+
+advancedGauges.myNewMetric.reset(); // before re-emitting labeled series
+for (const row of myAgg) {
+  advancedGauges.myNewMetric.set({ dimension: row._id || "unknown" }, row.count);
+}
+```
+
+:::warning[allowDiskUse is non-negotiable for full-collection groups]
+Any aggregation that `$group`s across the entire `messages` or `transactions` collection will exceed Mongo's 100 MB in-memory limit on real LibreChat installs. **Always pass `{ allowDiskUse: true }`.** See the Architecture page section "allowDiskUse: true".
+:::
+
+### If you need user emails
+
+**Don't `$lookup` against `users`.** Use the pre-loaded `userIdToEmail` map:
+
+```ts
+for (const row of myAgg) {
+  const email = userIdToEmail.get(String(row._id.user)) || "unknown";
+  const domain = extractEmailDomain(email);
+  // ... bucket by domain ...
+}
+```
+
+See `extractEmailDomain` at `src/metrics/util.ts`. The Architecture page explains why (six existing `$lookup`s were rewritten this way).
+
+## 5. Index assertion (if your query needs one)
+
+If your `$match` or `$group` benefits from an index that may not exist on every LibreChat install, add it to `src/metrics/indexAssertions.ts`:
+
+```ts reference
+https://github.com/rubentalstra/librechat-prom-exporter/blob/main/src/metrics/indexAssertions.ts
+```
+
+Add a new entry to `RECOMMENDED_INDEXES`:
+
+```ts
+{
+  collection: "messages",
+  key: { /* your index spec */ },
+  reason: "powers librechat_my_new_metric",
+},
+```
+
+This will warn the operator + emit `librechat_exporter_missing_indexes{collection,key}=1` when the index is missing.
+
+## 6. Write a test
+
+Tests live next to source as `*.test.ts`. Use Vitest:
+
+```ts
+// src/metrics/myNewMetric.test.ts
+import { describe, expect, it } from "vitest";
+// ...
+```
+
+For pure-JS helpers, unit-test them directly. For Mongo-touching code, use `mongodb-memory-server` (already a dev dep). See `src/metrics/util.test.ts` for the simplest pattern; `src/middleware/metricsAuth.test.ts` for a more involved one.
+
+## 7. Document on the metrics reference
+
+Add a row (or section) to `website/docs/reference/metrics.mdx` describing the metric, its labels, and what it measures. Keep the table format consistent with the surrounding entries.
+
+## 8. Add a changelog entry
+
+Open `website/blog/` and add to the most recent in-progress post (or create the next one if a release just shipped). Use a `### Metrics` heading with a bullet describing the new metric + why.
+
+## 9. Submit the PR
+
+Use the [pull request template](https://github.com/rubentalstra/librechat-prom-exporter/blob/main/.github/pull_request_template.md). In the description, include:
+
+- Sample Prometheus output of the new metric.
+- A screenshot of a Grafana panel using it, if applicable.
+- The cardinality assessment — total series count estimate at typical scale.
+
+CI will run lint + typecheck + tests + Docker build before maintainer review. The docs site build also runs on PRs touching `website/**`, so any broken link or invalid frontmatter is caught at PR time.
