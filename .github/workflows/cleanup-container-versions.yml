@@ -1,24 +1,32 @@
-name: Cleanup Container Versions
+name: Cleanup GHCR Container Versions
 
-# Deletes orphaned (untagged) container manifest versions from GHCR.
-# Each CD push leaves the previous push's per-platform manifests behind
-# as untagged versions — GHCR never auto-prunes these. Without this job,
-# the Packages UI accumulates `sha256:...` entries indefinitely.
+# Prune untagged orphan manifest digests from GHCR. Replaces the prior
+# actions/delete-package-versions@v5 setup, which is NOT multi-arch-aware
+# (upstream issues #90 and #162 confirm). It would treat per-arch children
+# of a tagged multi-arch index as orphans and delete them — leaving the
+# tagged image un-pullable on the removed architecture.
 #
-# Strategy:
-#   - delete-only-untagged-versions: 'true' protects every tagged release
-#     (latest, v1.2.3, v1.2, etc.) — they are never touched.
-#   - min-versions-to-keep: 20 keeps the 20 most recent versions overall
-#     so a recently-pushed image whose digest hasn't yet been tagged by
-#     a downstream consumer is not yanked from under their feet.
-#   - Cosign signatures (`sha256-<digest>.sig`) and SBOM attestations
-#     are themselves stored under tags (the hyphenated form), so they
-#     are protected by `delete-only-untagged-versions: 'true'`.
+# dataaxiom/ghcr-cleanup-action natively understands:
+#   - multi-arch manifest lists (excludes child images from cleanup)
+#   - cosign signature tags (sha256-<digest>.sig)
+#   - attestation referrers
+# The cleanup algorithm removes those child/referrer images from the
+# working set BEFORE any deletion logic, so per-arch sub-manifests of
+# any tagged index are safe by construction.
 
 on:
   schedule:
     - cron: "0 3 * * 0" # Sunday 03:00 UTC, weekly
-  workflow_dispatch: # also runnable on-demand from the Actions tab
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Log only, do not delete"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 permissions:
   packages: write
@@ -31,10 +39,33 @@ jobs:
   prune:
     runs-on: ubuntu-24.04
     steps:
-      - name: Delete untagged container versions
-        uses: actions/delete-package-versions@v5
+      - name: Cleanup untagged + orphaned referrer images
+        uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          package-name: librechat-prom-exporter
-          package-type: container
-          min-versions-to-keep: 20
-          delete-only-untagged-versions: "true"
+          # Explicit even though it defaults to repo name; future-proof
+          # against repo rename.
+          package: librechat-prom-exporter
+
+          # Primary cleanup: delete untagged images. Per-arch children of
+          # tagged indexes, cosign sigs, and attestation referrers are
+          # excluded automatically before this rule applies.
+          delete-untagged: true
+
+          # Safety buffer: keep newest 5 truly-untagged digests so an
+          # in-flight push isn't pulled out from under a concurrent
+          # consumer fetch.
+          keep-n-untagged: 5
+
+          # Sweep stranded cosign signature tags (sha256-<digest>.sig)
+          # whose underlying image no longer exists.
+          delete-orphaned-images: true
+
+          # Post-run scan: warn if any multi-arch image is missing a
+          # child platform manifest. Informational; does not fail the job.
+          validate: true
+
+          # Manual runs default to dry-run=true (safe-by-default); the
+          # weekly cron uses dry-run=false.
+          dry-run: ${{ github.event.inputs.dry-run || 'false' }}
+
+          log-level: info
