@@ -1,8 +1,9 @@
 import { updateBasicMetrics } from "./basicMetrics";
 import { updateAdvancedMetrics } from "./advancedMetrics";
 import { advancedGauges } from "./advancedMetrics";
+import { envFlag } from "./util";
 
-const LOG_TIMINGS = process.env.LOG_TIMINGS === "1";
+const LOG_TIMINGS = envFlag("LOG_TIMINGS", false);
 
 async function timed(group: string, fn: () => Promise<void>): Promise<void> {
   const start = Date.now();

@@ -15,6 +15,13 @@ import {
   Transaction,
   Action,
 } from "../models";
+import { envFlag, extractEmailDomain } from "./util";
+
+// Per-user `email`-labeled metrics are unbounded in cardinality (one series
+// per user, retained by prom-client for the process lifetime). Default off
+// to protect large deployments; set EMIT_PER_USER_METRICS=true to enable.
+// Domain-level (`*_by_email_domain`) metrics remain on regardless.
+const EMIT_PER_USER_METRICS = envFlag("EMIT_PER_USER_METRICS", false);
 
 export const advancedGauges = {
   // Message metrics
@@ -638,11 +645,11 @@ function getUsersByDomainPipeline(timeFilter: Date) {
   ];
 }
 
-const LOG_TIMINGS = process.env.LOG_TIMINGS === "1";
+const LOG_TIMINGS = envFlag("LOG_TIMINGS", false);
 
 export async function updateAdvancedMetrics(): Promise<void> {
   try {
-    // [perf] section timing — gated behind LOG_TIMINGS=1 to keep normal
+    // [perf] section timing — gated behind LOG_TIMINGS=true to keep normal
     // operation quiet. When enabled, each section logs its duration and the
     // cumulative time since the scrape started.
     let __lastMark = Date.now();
@@ -926,7 +933,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     for (const user of users) {
       const email: string = user.email;
-      const email_domain = email.split("@")[1] || "unknown";
+      const email_domain = extractEmailDomain(email);
       domainCountMap.set(
         email_domain,
         (domainCountMap.get(email_domain) || 0) + 1,
@@ -1299,12 +1306,14 @@ export async function updateAdvancedMetrics(): Promise<void> {
     const tokensByModelDomain: Map<string, number> = new Map();
     for (const row of tokensByModelUserAgg) {
       const email = row.email || "unknown";
-      const emailDomain = email.includes("@") ? email.split("@")[1] : "unknown";
+      const emailDomain = extractEmailDomain(email);
 
-      advancedGauges.transactionTokenSumByModelUser.set(
-        { model: row.model, tokenType: row.tokenType, email },
-        row.tokens,
-      );
+      if (EMIT_PER_USER_METRICS) {
+        advancedGauges.transactionTokenSumByModelUser.set(
+          { model: row.model, tokenType: row.tokenType, email },
+          row.tokens,
+        );
+      }
 
       const domainKey = `${row.model}\u0000${row.tokenType}\u0000${emailDomain}`;
       tokensByModelDomain.set(
@@ -1430,9 +1439,11 @@ export async function updateAdvancedMetrics(): Promise<void> {
       }
       const agent = agentMap.get(row.agentId)!;
       const email = row.email || "unknown";
-      const emailDomain = email.includes("@") ? email.split("@")[1] : "unknown";
+      const emailDomain = extractEmailDomain(email);
 
-      advancedGauges.agentUsageByUserCount.set({ agent, email }, row.count);
+      if (EMIT_PER_USER_METRICS) {
+        advancedGauges.agentUsageByUserCount.set({ agent, email }, row.count);
+      }
 
       const domainKey = `${agent}|${emailDomain}`;
       agentDomainCounts.set(
@@ -1895,8 +1906,10 @@ export async function updateAdvancedMetrics(): Promise<void> {
     const costByDomainMap: Map<string, number> = new Map();
     for (const row of costByDomainUserAgg) {
       const email = userIdToEmail.get(String(row._id)) || "unknown";
-      const domain = email.includes("@") ? email.split("@")[1] : "unknown";
-      advancedGauges.transactionCostByUser.set({ email }, row.cost);
+      const domain = extractEmailDomain(email);
+      if (EMIT_PER_USER_METRICS) {
+        advancedGauges.transactionCostByUser.set({ email }, row.cost);
+      }
       costByDomainMap.set(
         domain,
         (costByDomainMap.get(domain) || 0) + row.cost,
@@ -2052,8 +2065,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     const agentByDomainMap: Map<string, number> = new Map();
     for (const row of agentByAuthorAgg) {
       const email: string | null = row._id;
-      const domain =
-        email && email.includes("@") ? email.split("@")[1] : "unknown";
+      const domain = extractEmailDomain(email);
       agentByDomainMap.set(
         domain,
         (agentByDomainMap.get(domain) || 0) + row.count,
@@ -2163,9 +2175,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     for (const row of mcpByToolDomainAgg) {
       const toolId: string = row._id?.toolId || "unknown";
       const email: string = row._id?.email || "unknown";
-      const email_domain = email.includes("@")
-        ? email.split("@")[1]
-        : "unknown";
+      const email_domain = extractEmailDomain(email);
       const key = `${toolId}\u0000${email_domain}`;
       mcpDomainAcc.set(key, (mcpDomainAcc.get(key) || 0) + row.count);
     }
@@ -2246,8 +2256,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     const fileBytesByDomainMap: Map<string, number> = new Map();
     for (const row of fileByDomainAgg) {
       const email: string | null = row._id;
-      const domain =
-        email && email.includes("@") ? email.split("@")[1] : "unknown";
+      const domain = extractEmailDomain(email);
       fileBytesByDomainMap.set(
         domain,
         (fileBytesByDomainMap.get(domain) || 0) + row.totalBytes,
@@ -2333,8 +2342,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     for (const row of feedbackByDomain30dAgg) {
       const email: string | null = row._id?.email;
       const rating: string = row._id?.rating || "unknown";
-      const domain =
-        email && email.includes("@") ? email.split("@")[1] : "unknown";
+      const domain = extractEmailDomain(email);
       const key = `${domain}\u0000${rating}`;
       feedbackDomainAcc.set(key, (feedbackDomainAcc.get(key) || 0) + row.count);
     }
@@ -2405,7 +2413,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     __mark("END");
     // advanced scrape duration is reported via the [timing] log when
-    // LOG_TIMINGS=1; no per-cycle "updated" line by default.
+    // LOG_TIMINGS=true; no per-cycle "updated" line by default.
   } catch (error) {
     console.error("Error updating advanced metrics:", error);
   }

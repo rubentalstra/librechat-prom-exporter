@@ -44,7 +44,8 @@ import { updateBasicMetricsTimed, updateAdvancedMetricsTimed } from "./metrics";
 // advanced scrapes blocking the much cheaper basic ones.
 setInterval(updateBasicMetricsTimed, refreshInterval);
 setInterval(updateAdvancedMetricsTimed, advancedRefreshInterval);
-if (process.env.LOG_TIMINGS === "1") {
+import { envFlag } from "./metrics/util";
+if (envFlag("LOG_TIMINGS", false)) {
   console.log(
     `[scheduler] basic every ${refreshInterval}ms, advanced every ${advancedRefreshInterval}ms`,
   );
