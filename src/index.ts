@@ -9,7 +9,13 @@ import { getConfig } from "./config.js";
 import { logger } from "./logger.js";
 import { advancedGauges } from "./metrics/advancedMetrics.js";
 import { basicGauges } from "./metrics/basicMetrics.js";
-import { updateAdvancedMetricsTimed, updateBasicMetricsTimed, waitForIdle } from "./metrics/index.js";
+import { cardinalityGauges } from "./metrics/cardinalityMetrics.js";
+import {
+  updateAdvancedMetricsTimed,
+  updateBasicMetricsTimed,
+  updateCardinalityMetricsTimed,
+  waitForIdle,
+} from "./metrics/index.js";
 import { assertIndexes } from "./metrics/indexAssertions.js";
 import { installTenantHooks } from "./metrics/tenantHooks.js";
 import { buildMetricsAuth } from "./middleware/metricsAuth.js";
@@ -29,6 +35,9 @@ for (const gauge of Object.values(basicGauges)) {
   register.registerMetric(gauge);
 }
 for (const gauge of Object.values(advancedGauges)) {
+  register.registerMetric(gauge as client.Metric);
+}
+for (const gauge of Object.values(cardinalityGauges)) {
   register.registerMetric(gauge as client.Metric);
 }
 
@@ -54,17 +63,20 @@ mongoose
 
 const basicTimer = setInterval(updateBasicMetricsTimed, cfg.REFRESH_INTERVAL);
 const advancedTimer = setInterval(updateAdvancedMetricsTimed, cfg.ADVANCED_REFRESH_INTERVAL);
+const cardinalityTimer = setInterval(updateCardinalityMetricsTimed, cfg.CARDINALITY_REFRESH_INTERVAL);
 if (cfg.LOG_TIMINGS) {
   log.info(
     {
       basicMs: cfg.REFRESH_INTERVAL,
       advancedMs: cfg.ADVANCED_REFRESH_INTERVAL,
+      cardinalityMs: cfg.CARDINALITY_REFRESH_INTERVAL,
     },
     "scheduler started",
   );
 }
 void updateBasicMetricsTimed();
 void updateAdvancedMetricsTimed();
+void updateCardinalityMetricsTimed();
 
 const READY_STATE_LABEL: Record<number, string> = {
   0: "disconnected",
@@ -166,6 +178,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   log.info({ signal }, "shutdown signal received — draining");
   clearInterval(basicTimer);
   clearInterval(advancedTimer);
+  clearInterval(cardinalityTimer);
   await Promise.all(servers.map((s) => new Promise<void>((resolve) => s.close(() => resolve()))));
   await waitForIdle();
   try {

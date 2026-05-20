@@ -71,8 +71,10 @@ const Schema = z
 
     REFRESH_INTERVAL: positiveInt.default(30_000),
     ADVANCED_REFRESH_INTERVAL: positiveInt.optional(),
+    CARDINALITY_REFRESH_INTERVAL: positiveInt.optional(),
 
     EMIT_PER_USER_METRICS: boolish.default(false),
+    ANONYMIZE_EMAIL_LABEL: boolish.default(true),
     TENANT_ID: optionalTrimmed,
 
     TRUST_PROXY: z.string().default("loopback"),
@@ -136,6 +138,7 @@ const Schema = z
 
 export type Config = z.infer<typeof Schema> & {
   ADVANCED_REFRESH_INTERVAL: number;
+  CARDINALITY_REFRESH_INTERVAL: number;
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -150,7 +153,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   const data = parsed.data;
   const advanced = data.ADVANCED_REFRESH_INTERVAL ?? data.REFRESH_INTERVAL * 10;
-  return { ...data, ADVANCED_REFRESH_INTERVAL: advanced };
+  const cardinality = data.CARDINALITY_REFRESH_INTERVAL ?? advanced;
+  return { ...data, ADVANCED_REFRESH_INTERVAL: advanced, CARDINALITY_REFRESH_INTERVAL: cardinality };
 }
 
 let cached: Config | undefined;
