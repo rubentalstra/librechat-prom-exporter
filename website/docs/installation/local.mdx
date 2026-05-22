@@ -19,7 +19,8 @@ cd librechat-prom-exporter
 
 ```bash
 nvm use     # picks up Node 25 from .nvmrc
-npm install
+corepack enable   # one-time; lets Node manage the pnpm binary pinned in package.json
+pnpm install
 ```
 
 ## 3. Configure
@@ -33,13 +34,13 @@ Edit `.env` with your `MONGO_URI` and any optional settings. Full reference: [En
 ## 4. Build
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ## 5. Run
 
 ```bash
-npm run start
+pnpm start
 ```
 
 The exporter listens on the configured port (default `9087`). Hit `http://localhost:9087/health` and `http://localhost:9087/metrics` to confirm.
@@ -49,16 +50,16 @@ The exporter listens on the configured port (default `9087`). Hit `http://localh
 For iterative development, skip the build step — `tsx watch` recompiles on save:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 ## Running the test suite
 
 ```bash
-npm run lint        # ESLint (zero warnings target)
-npm run typecheck   # tsc --noEmit
-npm run test:run    # Vitest, one-shot
-npm run test        # Vitest watch mode
+pnpm lint        # ESLint (zero warnings target)
+pnpm typecheck   # tsc --noEmit
+pnpm test:run    # Vitest, one-shot
+pnpm test        # Vitest watch mode
 ```
 
 Pre-commit hooks (husky + lint-staged) format + lint staged TypeScript files automatically.

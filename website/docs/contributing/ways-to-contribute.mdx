@@ -54,9 +54,8 @@ The docs site is in [`website/`](https://github.com/rubentalstra/librechat-prom-
 For larger doc changes (new page, restructure, new diagrams), preview locally:
 
 ```bash
-cd website
-npm install
-npm start
+pnpm install                  # from repo root — installs root + website (workspace)
+pnpm --filter ./website start
 # Opens http://localhost:3000/librechat-prom-exporter/
 ```
 

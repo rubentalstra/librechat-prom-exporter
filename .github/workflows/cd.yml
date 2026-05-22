@@ -122,7 +122,7 @@ jobs:
       # Scan the pushed image. Report-only: findings flow to GitHub's
       # Code Scanning UI but never block the deploy, because base-image
       # CVEs are out of our control and rebuild cadence varies. App-layer
-      # CRITICALs are gated by `npm audit` during the build (npm ci fails
+      # CRITICALs are gated by `pnpm audit` during the build (pnpm install fails
       # the build if it finds them) and the weekly Security Audit job.
       - name: Trivy scan
         uses: aquasecurity/trivy-action@v0.36.0

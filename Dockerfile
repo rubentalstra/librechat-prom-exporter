@@ -3,28 +3,51 @@
 # Stage 1: Build TypeScript
 FROM node:26-alpine AS builder
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME/bin:$PATH"
+# Alpine's node image doesn't ship corepack; install it from npm before
+# enabling it (pnpm docs also recommend the latest corepack to avoid the
+# Node-bundled corepack's stale-signature issue).
+RUN npm install -g corepack@latest && corepack enable
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts --prefer-offline --no-audit --silent
+# Workspace metadata first so the pnpm install layer is cache-friendly.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY website/package.json ./website/
+
+# Install only the exporter workspace package (and its deps) — `--filter
+# <pkg>...` follows the workspace dep graph but excludes the website,
+# keeping the build image lean. --ignore-scripts skips postinstalls in
+# the builder; we only need the binary tools (tsc) here.
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --filter "librechat-prom-exporter..." --ignore-scripts
 
 COPY tsconfig.json ./
 COPY src ./src
 
-RUN npm run build
+RUN pnpm run build
 
 # Stage 2: Install production dependencies only
 # Uses the same uid as the runtime base (chainguard uid 65532) so the
 # files copied across already have correct ownership at runtime.
 FROM node:26-alpine AS deps
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME/bin:$PATH"
+# Alpine's node image doesn't ship corepack; install it from npm before
+# enabling it (pnpm docs also recommend the latest corepack to avoid the
+# Node-bundled corepack's stale-signature issue).
+RUN npm install -g corepack@latest && corepack enable
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY website/package.json ./website/
 
-RUN npm ci --omit=dev --ignore-scripts --prefer-offline --no-audit --silent && \
-    npm cache clean --force && \
-    rm -rf /tmp/* /var/cache/apk/* /root/.npm && \
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --prod --frozen-lockfile --filter "librechat-prom-exporter..." --ignore-scripts && \
+    rm -rf /tmp/* /var/cache/apk/* && \
     find /app/node_modules -name "test" -type d -prune -exec rm -rf {} + 2>/dev/null || true && \
     find /app/node_modules -name "tests" -type d -prune -exec rm -rf {} + 2>/dev/null || true && \
     find /app/node_modules -name "__tests__" -type d -prune -exec rm -rf {} + 2>/dev/null || true && \
