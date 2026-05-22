@@ -84,39 +84,39 @@ Source: `src/metrics/advancedMetrics.ts`. ~60 metrics grouped here.
 
 ### Transactions / costs / tokens
 
-| Metric                                                  | Type  | Labels                               | Notes                                                                                   |
-| ------------------------------------------------------- | ----- | ------------------------------------ | --------------------------------------------------------------------------------------- |
-| `librechat_transaction_token_sum`                       | gauge | —                                    | Sum of token usage across all transactions.                                             |
-| `librechat_transaction_token_avg`                       | gauge | —                                    | Average tokens per transaction.                                                         |
-| `librechat_transaction_cost_24h` / `_7d` / `_30d`       | gauge | —                                    | Total USD cost across rolling windows.                                                  |
-| `librechat_transaction_cost_total_usd`                  | gauge | —                                    | Lifetime total USD cost.                                                                |
-| `librechat_transaction_cost_sum`                        | gauge | `tokenType`                          | Cost summed per token type (`prompt`, `completion`).                                    |
-| `librechat_transaction_cost_avg`                        | gauge | `tokenType`                          | Average cost per token type.                                                            |
-| `librechat_transaction_cost_per_model`                  | gauge | `model`                              | Cost per model.                                                                         |
-| `librechat_transaction_cost_by_email_domain`            | gauge | `email_domain`                       | Cost grouped by user's email domain.                                                    |
-| `librechat_transaction_cost_by_agent`                   | gauge | `agent`                              | Cost grouped by agent.                                                                  |
-| `librechat_cost_per_conversation_avg`                   | gauge | —                                    | Average cost per conversation (denominator uses `countDocuments` so it's tenant-aware). |
-| `librechat_transaction_token_sum_by_model_email_domain` | gauge | `model`, `tokenType`, `email_domain` | Per-domain token usage.                                                                 |
-| **High-cardinality (gated)**                            |       |                                      |                                                                                         |
+| Metric                                                  | Type  | Labels                               | Notes                                                                                                                                   |
+| ------------------------------------------------------- | ----- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `librechat_transaction_token_sum`                       | gauge | —                                    | Sum of token usage across all transactions.                                                                                             |
+| `librechat_transaction_token_avg`                       | gauge | —                                    | Average tokens per transaction.                                                                                                         |
+| `librechat_transaction_cost_24h` / `_7d` / `_30d`       | gauge | —                                    | Total USD cost across rolling windows.                                                                                                  |
+| `librechat_transaction_cost_total_usd`                  | gauge | —                                    | Lifetime total USD cost.                                                                                                                |
+| `librechat_transaction_cost_sum`                        | gauge | `tokenType`                          | Cost summed per token type (`prompt`, `completion`).                                                                                    |
+| `librechat_transaction_cost_avg`                        | gauge | `tokenType`                          | Average cost per token type.                                                                                                            |
+| `librechat_transaction_cost_per_model`                  | gauge | `model`                              | Cost per model.                                                                                                                         |
+| `librechat_transaction_cost_by_email_domain`            | gauge | `email_domain`                       | Cost grouped by user's email domain.                                                                                                    |
+| `librechat_transaction_cost_by_agent`                   | gauge | `agent`                              | Cost grouped by agent.                                                                                                                  |
+| `librechat_cost_per_conversation_avg`                   | gauge | —                                    | Average cost per conversation (denominator uses `countDocuments` so it's tenant-aware).                                                 |
+| `librechat_transaction_token_sum_by_model_email_domain` | gauge | `model`, `tokenType`, `email_domain` | Per-domain token usage.                                                                                                                 |
+| **High-cardinality (gated)**                            |       |                                      |                                                                                                                                         |
 | `librechat_transaction_cost_by_user`                    | gauge | `id`                                 | Only emitted when `EMIT_PER_USER_METRICS=true`. `id` is the user's Mongo `_id` by default, or email when `ANONYMIZE_EMAIL_LABEL=false`. |
-| `librechat_transaction_token_sum_by_model_user`         | gauge | `model`, `tokenType`, `id`           | Same gate and same `id`-label semantics.                                                |
+| `librechat_transaction_token_sum_by_model_user`         | gauge | `model`, `tokenType`, `id`           | Same gate and same `id`-label semantics.                                                                                                |
 
 ### Agents / assistants / tools
 
-| Metric                                          | Type  | Labels                  | Notes                                        |
-| ----------------------------------------------- | ----- | ----------------------- | -------------------------------------------- |
-| `librechat_agent_usage_count`                   | gauge | `agent`                 | Agent invocation count.                      |
-| `librechat_agent_unique_users_count`            | gauge | `agent`                 | Distinct users per agent (lifetime).         |
-| `librechat_agent_unique_users_30d`              | gauge | `agent`                 | Distinct users per agent in last 30 days.    |
-| `librechat_agent_last_used_age_seconds`         | gauge | `agent`                 | Seconds since most recent use.               |
-| `librechat_agent_avg_messages_per_use`          | gauge | `agent`                 | Average messages per conversation, by agent. |
-| `librechat_agent_creation_count_by_user_domain` | gauge | `email_domain`          | Agents created, grouped by author domain.    |
-| `librechat_agent_usage_by_domain_count`         | gauge | `agent`, `email_domain` | Usage count per agent + user domain.         |
+| Metric                                          | Type  | Labels                  | Notes                                                                                                                          |
+| ----------------------------------------------- | ----- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `librechat_agent_usage_count`                   | gauge | `agent`                 | Agent invocation count.                                                                                                        |
+| `librechat_agent_unique_users_count`            | gauge | `agent`                 | Distinct users per agent (lifetime).                                                                                           |
+| `librechat_agent_unique_users_30d`              | gauge | `agent`                 | Distinct users per agent in last 30 days.                                                                                      |
+| `librechat_agent_last_used_age_seconds`         | gauge | `agent`                 | Seconds since most recent use.                                                                                                 |
+| `librechat_agent_avg_messages_per_use`          | gauge | `agent`                 | Average messages per conversation, by agent.                                                                                   |
+| `librechat_agent_creation_count_by_user_domain` | gauge | `email_domain`          | Agents created, grouped by author domain.                                                                                      |
+| `librechat_agent_usage_by_domain_count`         | gauge | `agent`, `email_domain` | Usage count per agent + user domain.                                                                                           |
 | `librechat_agent_usage_by_user_count`           | gauge | `agent`, `id`           | Gated by `EMIT_PER_USER_METRICS=true`. `id` is the user's Mongo `_id` by default, or email when `ANONYMIZE_EMAIL_LABEL=false`. |
-| `librechat_assistant_usage_count`               | gauge | `assistant`             | Assistant invocation count.                  |
-| `librechat_model_usage_count`                   | gauge | `model`                 | Per-model message count.                     |
-| `librechat_tool_call_count_by_tool`             | gauge | `toolId`                | Tool-call counts.                            |
-| `librechat_tool_call_avg_latency_seconds`       | gauge | `toolId`                | Average tool-call latency.                   |
+| `librechat_assistant_usage_count`               | gauge | `assistant`             | Assistant invocation count.                                                                                                    |
+| `librechat_model_usage_count`                   | gauge | `model`                 | Per-model message count.                                                                                                       |
+| `librechat_tool_call_count_by_tool`             | gauge | `toolId`                | Tool-call counts.                                                                                                              |
+| `librechat_tool_call_avg_latency_seconds`       | gauge | `toolId`                | Average tool-call latency.                                                                                                     |
 
 ### MCP (Model Context Protocol)
 
