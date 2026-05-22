@@ -3,6 +3,7 @@ import { logger } from "../logger.js";
 
 import { advancedGauges, updateAdvancedMetrics } from "./advancedMetrics.js";
 import { updateBasicMetrics } from "./basicMetrics.js";
+import { updateCardinalityMetrics } from "./cardinalityMetrics.js";
 
 async function timed(group: string, fn: () => Promise<void>): Promise<void> {
   const log = logger();
@@ -24,6 +25,7 @@ async function timed(group: string, fn: () => Promise<void>): Promise<void> {
 
 let basicRunning = false;
 let advancedRunning = false;
+let cardinalityRunning = false;
 
 export async function updateBasicMetricsTimed(): Promise<void> {
   if (basicRunning) {
@@ -51,14 +53,27 @@ export async function updateAdvancedMetricsTimed(): Promise<void> {
   }
 }
 
+export async function updateCardinalityMetricsTimed(): Promise<void> {
+  if (cardinalityRunning) {
+    logger().warn("cardinality scrape still running, skipping this tick");
+    return;
+  }
+  cardinalityRunning = true;
+  try {
+    await timed("cardinality", updateCardinalityMetrics);
+  } finally {
+    cardinalityRunning = false;
+  }
+}
+
 export async function updateMetrics(): Promise<void> {
-  await Promise.all([updateBasicMetricsTimed(), updateAdvancedMetricsTimed()]);
+  await Promise.all([updateBasicMetricsTimed(), updateAdvancedMetricsTimed(), updateCardinalityMetricsTimed()]);
 }
 
 export async function waitForIdle(timeoutMs = 10_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (!basicRunning && !advancedRunning) {
+    if (!basicRunning && !advancedRunning && !cardinalityRunning) {
       return;
     }
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
