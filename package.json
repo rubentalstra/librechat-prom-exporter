@@ -7,8 +7,8 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "lint": "eslint . --ext .ts --config eslint.config.mjs",
-    "lint:fix": "eslint . --ext .ts --config eslint.config.mjs --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
@@ -20,7 +20,7 @@
   "lint-staged": {
     "*.ts": [
       "prettier --write",
-      "eslint --fix --config eslint.config.mjs"
+      "eslint --fix"
     ],
     "*.{json,yml,yaml}": [
       "prettier --write"
@@ -58,20 +58,15 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/compat": "^2.1.0",
-    "@eslint/eslintrc": "^3.3.5",
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
     "@types/supertest": "^7.2.0",
-    "@typescript-eslint/eslint-plugin": "^8.59.4",
-    "@typescript-eslint/parser": "^8.59.4",
     "@vitest/coverage-v8": "^4.1.7",
-    "eslint": "^9.39.4",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-jest": "^29.15.2",
+    "eslint": "^10.4.0",
+    "eslint-plugin-import-x": "^4.16.2",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
@@ -82,6 +77,7 @@
     "supertest": "^7.2.2",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4",
     "vitest": "^4.1.7"
   }
 }

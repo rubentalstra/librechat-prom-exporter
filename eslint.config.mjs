@@ -1,54 +1,31 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-import { fixupConfigRules, fixupPluginRules } from "@eslint/compat";
-import { FlatCompat } from "@eslint/eslintrc";
 import js from "@eslint/js";
-import typescriptEslintPlugin from "@typescript-eslint/eslint-plugin";
-import tsParser from "@typescript-eslint/parser";
-import importPlugin from "eslint-plugin-import";
-import jest from "eslint-plugin-jest";
+import importX from "eslint-plugin-import-x";
 import globals from "globals";
+import tseslint from "typescript-eslint";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
-});
-
-export default [
+export default tseslint.config(
   {
-    files: ["eslint.config.mjs"],
-    languageOptions: {
-      parserOptions: {},
-    },
+    ignores: ["node_modules/**", "dist/**", "coverage/**", "website/**", "*.config.mjs"],
   },
-  {
-    ignores: ["node_modules/**/*", "dist/**/*"],
-  },
-  ...fixupConfigRules(compat.extends("eslint:recommended")),
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     plugins: {
-      "@typescript-eslint": fixupPluginRules(typescriptEslintPlugin),
-      import: importPlugin,
-      jest: fixupPluginRules(jest),
+      "import-x": importX,
     },
     languageOptions: {
       globals: {
         ...globals.node,
         ...globals.commonjs,
       },
-      parser: tsParser,
       ecmaVersion: "latest",
       sourceType: "module",
     },
     settings: {
-      "import/parsers": {
+      "import-x/parsers": {
         "@typescript-eslint/parser": [".ts"],
       },
-      "import/resolver": {
+      "import-x/resolver": {
         node: {
           extensions: [".ts", ".js"],
         },
@@ -71,7 +48,7 @@ export default [
       "no-trailing-spaces": "error",
       "comma-dangle": ["error", "always-multiline"],
       "no-console": "error",
-      "import/order": [
+      "import-x/order": [
         "error",
         {
           groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
@@ -81,15 +58,6 @@ export default [
       ],
     },
   },
-  ...compat
-    .extends("plugin:@typescript-eslint/eslint-recommended", "plugin:@typescript-eslint/recommended")
-    .map((config) => {
-      // Strip `plugins` from FlatCompat output — flat config expects plugins
-      // declared at the top-level config object, not on every imported block.
-      const rest = { ...config };
-      delete rest.plugins;
-      return { ...rest, files: ["**/*.ts"] };
-    }),
   {
     files: ["**/*.ts"],
     rules: {
@@ -107,7 +75,7 @@ export default [
     rules: {
       "no-console": "off",
       "@typescript-eslint/no-unused-vars": "off",
-      "import/order": "off",
+      "import-x/order": "off",
     },
   },
-];
+);
