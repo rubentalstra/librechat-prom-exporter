@@ -1,0 +1,73 @@
+---
+title: Ways to contribute
+description: Five concrete paths to contribute — bugs, metrics, dashboards, docs, sponsorship.
+sidebar_position: 2
+---
+
+# Ways to contribute
+
+Code is just one path. Below are five concrete ways to help, ordered roughly by effort.
+
+## 1. File a high-signal bug
+
+The most valuable thing a non-maintainer can do is file a bug that doesn't waste reviewer time. A "high-signal" bug report includes:
+
+- **Reproducer** — exact steps to make the issue happen, ideally with a minimal `docker-compose.yml`.
+- **MongoDB version** — `db.version()` output. Many issues (percentile gauges reporting 0, etc.) are version-specific.
+- **Exporter version** — image tag (e.g. `ghcr.io/rubentalstra/librechat-prom-exporter:0.8.0`) or commit SHA if building from source.
+- **Env vars in play** — at least the auth-related ones, `TENANT_ID`, `EMIT_PER_USER_METRICS`. Redact secrets.
+- **Log excerpt** — the pino JSON lines from the moment of failure.
+- **Expected vs actual** — what metric value did you expect, what did you get, what made you think the expected value was right.
+
+Use the [Bug Report template](https://github.com/rubentalstra/librechat-prom-exporter/issues/new?template=BUG-REPORT.yml) and fill every field — `n/a` is better than blank.
+
+Before filing, check [Troubleshooting](../guides/troubleshooting) and search existing issues. If your question is "how do I do X" rather than "X is broken", file a [Discussion](https://github.com/rubentalstra/librechat-prom-exporter/discussions) instead.
+
+## 2. Propose a new metric
+
+The exporter aims to cover everything useful LibreChat operators want to graph. If something's missing, propose it.
+
+Two paths:
+
+- **Quick idea**: open a [Feature Request issue](https://github.com/rubentalstra/librechat-prom-exporter/issues/new?template=FEATURE-REQUEST.yml) describing what you want to measure and roughly how. Maintainer will respond with a cardinality assessment + sketch of the aggregation shape.
+- **PR-ready**: follow the [Adding a metric](./adding-a-metric) playbook end-to-end and send the PR.
+
+Either way, the [cardinality budget rules](./adding-a-metric#cardinality-budget) decide whether a new metric is shipped enabled-by-default or gated behind `EMIT_PER_USER_METRICS`.
+
+## 3. Share a Grafana dashboard {/* #share-a-grafana-dashboard */}
+
+The repo ships [`librechat-exporter-dashboard.json`](https://github.com/rubentalstra/librechat-prom-exporter/blob/main/librechat-exporter-dashboard.json) as a starter. If you've built panels for cost trends, retention, abuse detection, or anything else, share them.
+
+To contribute a dashboard:
+
+1. Export from Grafana: **Dashboard settings → JSON Model → copy**.
+2. Strip your data source UID (replace with `${DS_PROMETHEUS}`) so the dashboard is portable.
+3. Open a PR adding the file under `dashboards/<your-dashboard-name>.json` (or extending the existing bundle if it's a small addition).
+4. In the PR description: screenshot + 1-line of what it shows + which metrics it uses.
+
+The maintainer will validate it imports cleanly into a fresh Grafana with this exporter as the source.
+
+## 4. Improve docs
+
+The docs site is in [`website/`](https://github.com/rubentalstra/librechat-prom-exporter/tree/main/website). Each page has an **Edit this page** link at the bottom that drops you into the GitHub editor on the right file. Small fixes (typos, broken links, clarifying a paragraph) are extremely welcome — they don't need an issue first, just open a PR.
+
+For larger doc changes (new page, restructure, new diagrams), preview locally:
+
+```bash
+pnpm install                  # from repo root — installs root + website (workspace)
+pnpm --filter ./website start
+# Opens http://localhost:3000/librechat-prom-exporter/
+```
+
+Use `:::tip[Title]`, `:::note[Title]`, `:::warning[Title]`, `:::danger[Title]` admonitions and Mermaid diagrams (already enabled) where they help.
+
+## 5. Sponsor
+
+If this exporter saves your ops team time and you want to keep development funded:
+
+- **[GitHub Sponsors](https://github.com/sponsors/rubentalstra)** — one-time or recurring.
+- **Or just say thanks** in a [Discussion](https://github.com/rubentalstra/librechat-prom-exporter/discussions) — knowing the project is used in production is genuinely motivating.
+
+---
+
+Other ideas (corporate adopter? want to commission a feature? need commercial support?): open a Discussion and we'll figure it out.

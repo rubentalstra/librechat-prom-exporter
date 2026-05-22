@@ -15,9 +15,9 @@ const REPO_URL = `https://github.com/${ORG}/${REPO}`;
 // hand. Falls back gracefully if the field is missing.
 const require = createRequire(import.meta.url);
 const rootPkg = require("../package.json") as { version: string };
-const APP_VERSION = rootPkg.version; // e.g. "0.9.0"
-const APP_MAJOR_MINOR = APP_VERSION.split(".").slice(0, 2).join("."); // e.g. "0.9"
-const CURRENT_VERSION_LABEL = `${APP_MAJOR_MINOR} (Current)`;
+const APP_VERSION = rootPkg.version; // e.g. "0.10.0"
+const APP_MAJOR_MINOR = APP_VERSION.split(".").slice(0, 2).join("."); // e.g. "0.10"
+const LATEST_VERSION_LABEL = `${APP_MAJOR_MINOR} (Latest)`;
 
 // Lighthouse CI runs `npm run build` and serves the resulting `build/`
 // directly at `/` via lhci's built-in static server — it has no way to
@@ -110,8 +110,25 @@ const config: Config = {
           editUrl: `${REPO_URL}/tree/main/website/`,
           showLastUpdateAuthor: true,
           showLastUpdateTime: true,
-          versions: { current: { label: CURRENT_VERSION_LABEL } },
-          lastVersion: "current",
+          // Versioning model:
+          // - `current` = live `website/docs/` = unreleased work for the next
+          //   release. Hidden from URLs under `/docs/next/` and banner-tagged
+          //   so visitors don't accidentally trust pre-release content.
+          // - The latest released version is whatever package.json says. Each
+          //   release runs `docusaurus docs:version <major.minor>` which
+          //   snapshots the docs as that version; this config then picks it
+          //   up automatically via `lastVersion: APP_MAJOR_MINOR`.
+          versions: {
+            current: {
+              label: "Next 🚧",
+              path: "next",
+              banner: "unreleased",
+            },
+            [APP_MAJOR_MINOR]: {
+              label: LATEST_VERSION_LABEL,
+            },
+          },
+          lastVersion: APP_MAJOR_MINOR,
         },
         blog: {
           showReadingTime: true,

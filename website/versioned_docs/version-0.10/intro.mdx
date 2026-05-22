@@ -1,0 +1,40 @@
+---
+title: Introduction
+description: Prometheus exporter for LibreChat — what it does, who it's for, and what to read next.
+sidebar_position: 1
+slug: /intro
+---
+
+# LibreChat Prometheus Exporter
+
+A lightweight Node.js service that connects to a LibreChat MongoDB database, collects useful metrics, and exposes them on a `/metrics` endpoint that **Prometheus** can scrape and **Grafana** can visualize.
+
+Built with Express, Mongoose, and prom-client. Designed for production: helmet, rate limiting, optional auth, multi-arch container images, SLSA build provenance, signed releases.
+
+## Features
+
+- **Basic metrics** — `countDocuments` per LibreChat collection (users, conversations, messages, transactions, …) on a cheap fast loop.
+- **Advanced metrics** — heavy `$facet` aggregations on a separate slower loop so the cheap counts never block the expensive ones.
+- **Optional auth** — four methods (static bearer, HTTP Basic, OAuth2/OIDC JWT, IP allowlist). Off by default; opt in via env vars.
+- **Multi-tenant scoping** — set `TENANT_ID` and every aggregate / find / count gets a `tenantId` filter injected automatically.
+- **Multi-arch image** — `linux/amd64` + `linux/arm64`. Signed with [cosign](https://github.com/sigstore/cosign), SLSA build-provenance attested, SBOM attached to releases.
+
+## Prerequisites
+
+1. **Node.js** 24.x or later (25.x recommended; see [`.nvmrc`](https://github.com/rubentalstra/librechat-prom-exporter/blob/main/.nvmrc) at the repo root)
+2. **MongoDB 7+** — LibreChat's default `docker-compose.yml` ships `mongo:8.0`. Older Mongo versions silently emit `0` for percentile metrics (`librechat_conversation_length_p{50,90,95}`, `librechat_file_size_p{50,95}_bytes`) because `$percentile` is a 7.0+ operator.
+3. **Docker** (recommended path; see [Installation → Docker](./installation/docker)).
+4. **Prometheus** — for scraping the `/metrics` endpoint.
+5. **Grafana** — optional but highly recommended for dashboards.
+
+## Where to next
+
+- **Just trying it out?** → [Installation → Docker](./installation/docker)
+- **Configuring it for production?** → [Reference → Environment variables](./reference/environment-variables) and [Reference → Auth](./reference/auth)
+- **Hitting performance issues?** → [Guides → Tuning](./guides/tuning) and [Guides → Troubleshooting](./guides/troubleshooting)
+- **Building dashboards?** → [Grafana dashboard](./dashboard)
+- **Contributing?** → [Contributing](./contributing) and especially [Architecture](./contributing/architecture) before non-trivial changes.
+
+:::note[GDPR]
+This project has been developed with privacy in mind. It exposes only aggregated metrics that do not contain personally identifiable information (PII), adhering to the principle of data minimization. As a result, the project is designed to be consistent with the GDPR's requirements. However, overall GDPR compliance depends on the complete data-processing workflow and deployment configuration; users are responsible for ensuring their implementation meets all applicable data-protection regulations. This statement is informational and does not constitute legal advice.
+:::

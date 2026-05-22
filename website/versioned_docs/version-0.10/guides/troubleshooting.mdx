@@ -1,0 +1,67 @@
+---
+title: Troubleshooting
+description: Common issues and how to debug them.
+sidebar_position: 3
+---
+
+# Troubleshooting
+
+## Percentile gauges all report `0`
+
+Symptom: `librechat_conversation_length_p{50,90,95}` and `librechat_file_size_p{50,95}_bytes` are zero across the board.
+
+Cause: these metrics rely on Mongo's `$percentile` aggregation operator, which was added in **MongoDB 7.0**. On Mongo < 7 the operator silently returns no result and the exporter sets the gauges to 0.
+
+Fix: upgrade to MongoDB 7.0+. LibreChat's default `docker-compose.yml` ships `mongo:8.0` and is fine.
+
+## Missing-index warnings on startup / `librechat_exporter_missing_indexes` non-zero
+
+Each missing recommended index is logged once after Mongo connect and exposed as a label set on the `librechat_exporter_missing_indexes` gauge. Create the index using the `createIndex` snippet from the log message — they materially affect advanced-scrape duration on large collections.
+
+Example log line:
+
+```
+[indexes] missing recommended index on messages: {"createdAt":1} — Create with: db.messages.createIndex({"createdAt":1})
+```
+
+Run that exact snippet in `mongosh` against your LibreChat DB; restart isn't required, the assertion re-runs on next connect.
+
+## `/health` flapping between 200 and 503
+
+The exporter forces `serverSelectionTimeoutMS=5s` (vs. mongoose's 30 s default) so `/health` flips fast during an outage. If you see oscillation, the underlying Mongo is unstable — check the Mongo container logs and connection limits.
+
+## `/metrics` returns `401` despite a token being set
+
+Confirm the request hits the exporter directly, not via a proxy that strips `Authorization`. When behind a reverse proxy, also set `TRUST_PROXY` to a value matching your proxy topology so the rate limiter and IP allowlist see the original client IP. See [Auth → Behind a reverse proxy](../reference/auth#behind-a-reverse-proxy).
+
+## CD pipeline blocked on Trivy
+
+The CD workflow scans the published image and fails on CRITICAL/HIGH vulnerabilities **with a fix available**. To unblock:
+
+- Update the affected dependency (Dependabot opens weekly PRs).
+- If the finding is a false-positive, suppress it via `.trivyignore` with a justification comment.
+- If the finding is in the base image and Chainguard hasn't published a fixed version yet, wait for the daily rebuild.
+
+## Exporter container crashes immediately with "Environment configuration is invalid"
+
+zod validation rejected one or more env vars. The error message lists exactly which ones, e.g.:
+
+```
+Environment configuration is invalid:
+  - METRICS_BASIC_AUTH_USER: METRICS_BASIC_AUTH_USER and METRICS_BASIC_AUTH_PASSWORD must both be set or both unset
+  - PORT: Expected number, received NaN
+```
+
+This is **by design** — fail-fast on misconfiguration is preferable to silent fallback. Fix the env value(s) and restart.
+
+## Container reports `unhealthy` but `/metrics` works fine
+
+The Docker `HEALTHCHECK` consults `/health`, which returns 503 when Mongo is disconnected. Behavior is correct: if Mongo is unreachable, the exporter's metrics will be stale until the connection recovers, so the container should be flagged unhealthy.
+
+If your orchestrator is killing the container based on this, check `MONGO_URI` connectivity from inside the container's network namespace:
+
+```bash
+docker exec -it <exporter-container> /usr/bin/node -e "
+  fetch('http://127.0.0.1:9087/health').then(r => r.json()).then(console.log)
+"
+```

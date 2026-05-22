@@ -1,0 +1,65 @@
+---
+title: Local (from source)
+description: Run the exporter directly with Node.js — useful for development.
+sidebar_position: 2
+---
+
+# Local setup
+
+For development, debugging, or when you want to run the exporter outside Docker.
+
+## 1. Clone
+
+```bash
+git clone https://github.com/rubentalstra/librechat-prom-exporter.git
+cd librechat-prom-exporter
+```
+
+## 2. Install
+
+```bash
+nvm use     # picks up Node 25 from .nvmrc
+corepack enable   # one-time; lets Node manage the pnpm binary pinned in package.json
+pnpm install
+```
+
+## 3. Configure
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your `MONGO_URI` and any optional settings. Full reference: [Environment variables](../reference/environment-variables).
+
+## 4. Build
+
+```bash
+pnpm build
+```
+
+## 5. Run
+
+```bash
+pnpm start
+```
+
+The exporter listens on the configured port (default `9087`). Hit `http://localhost:9087/health` and `http://localhost:9087/metrics` to confirm.
+
+## Dev loop
+
+For iterative development, skip the build step — `tsx watch` recompiles on save:
+
+```bash
+pnpm dev
+```
+
+## Running the test suite
+
+```bash
+pnpm lint        # ESLint (zero warnings target)
+pnpm typecheck   # tsc --noEmit
+pnpm test:run    # Vitest, one-shot
+pnpm test        # Vitest watch mode
+```
+
+Pre-commit hooks (husky + lint-staged) format + lint staged TypeScript files automatically.
