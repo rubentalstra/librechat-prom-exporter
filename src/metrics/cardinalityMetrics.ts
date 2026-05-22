@@ -74,19 +74,15 @@ export async function updateCardinalityMetrics(): Promise<void> {
   // --- User map (mongo _id -> label) ---
   // The label name is always `id` (so it fits both shapes), but the value
   // is either the user's Mongo `_id` (anonymized, default) or the actual
-  // email address depending on `ANONYMIZE_EMAIL_LABEL`.
+  // email address depending on `ANONYMIZE_EMAIL_LABEL`. In the anonymize
+  // path the value is just `String(row._id)` from each aggregation row, so
+  // no users-collection scan is needed.
   const anonymize = anonymizeEmailLabel();
-  const userIdToLabel: Map<string, string> = new Map();
-  if (anonymize) {
-    const userDocs = await User.find({}, { _id: 1 }).lean();
-    for (const u of userDocs) {
-      const uid = String(u._id);
-      userIdToLabel.set(uid, uid);
-    }
-  } else {
+  const userIdToEmail: Map<string, string> = new Map();
+  if (!anonymize) {
     const userDocs = await User.find({}, { email: 1 }).lean();
     for (const u of userDocs) {
-      userIdToLabel.set(String(u._id), (u.email as string) || "unknown");
+      userIdToEmail.set(String(u._id), (u.email as string) || "unknown");
     }
   }
 
@@ -171,16 +167,15 @@ export async function updateCardinalityMetrics(): Promise<void> {
   // --- Emit ---
   resetAll();
 
+  const labelFor = (userId: string): string => (anonymize ? userId : userIdToEmail.get(userId) || "unknown");
+
   for (const row of byUser) {
-    const id = userIdToLabel.get(String(row._id)) || (anonymize ? String(row._id) : "unknown");
-    cardinalityGauges.transactionCostByUser.set({ id }, row.cost);
+    cardinalityGauges.transactionCostByUser.set({ id: labelFor(String(row._id)) }, row.cost);
   }
 
   for (const row of byModelUser) {
-    const userId = String(row._id.user);
-    const id = userIdToLabel.get(userId) || (anonymize ? userId : "unknown");
     cardinalityGauges.transactionTokenSumByModelUser.set(
-      { model: row._id.model, tokenType: row._id.tokenType, id },
+      { model: row._id.model, tokenType: row._id.tokenType, id: labelFor(String(row._id.user)) },
       row.tokens,
     );
   }
@@ -190,8 +185,6 @@ export async function updateCardinalityMetrics(): Promise<void> {
     if (!agent) {
       continue;
     }
-    const userId = String(row._id.user);
-    const id = userIdToLabel.get(userId) || (anonymize ? userId : "unknown");
-    cardinalityGauges.agentUsageByUserCount.set({ agent, id }, row.count);
+    cardinalityGauges.agentUsageByUserCount.set({ agent, id: labelFor(String(row._id.user)) }, row.count);
   }
 }

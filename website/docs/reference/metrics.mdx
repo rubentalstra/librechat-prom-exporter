@@ -98,8 +98,8 @@ Source: `src/metrics/advancedMetrics.ts`. ~60 metrics grouped here.
 | `librechat_cost_per_conversation_avg`                   | gauge | —                                    | Average cost per conversation (denominator uses `countDocuments` so it's tenant-aware). |
 | `librechat_transaction_token_sum_by_model_email_domain` | gauge | `model`, `tokenType`, `email_domain` | Per-domain token usage.                                                                 |
 | **High-cardinality (gated)**                            |       |                                      |                                                                                         |
-| `librechat_transaction_cost_by_user`                    | gauge | `email`                              | Only emitted when `EMIT_PER_USER_METRICS=true`.                                         |
-| `librechat_transaction_token_sum_by_model_user`         | gauge | `model`, `tokenType`, `email`        | Same gate.                                                                              |
+| `librechat_transaction_cost_by_user`                    | gauge | `id`                                 | Only emitted when `EMIT_PER_USER_METRICS=true`. `id` is the user's Mongo `_id` by default, or email when `ANONYMIZE_EMAIL_LABEL=false`. |
+| `librechat_transaction_token_sum_by_model_user`         | gauge | `model`, `tokenType`, `id`           | Same gate and same `id`-label semantics.                                                |
 
 ### Agents / assistants / tools
 
@@ -112,7 +112,7 @@ Source: `src/metrics/advancedMetrics.ts`. ~60 metrics grouped here.
 | `librechat_agent_avg_messages_per_use`          | gauge | `agent`                 | Average messages per conversation, by agent. |
 | `librechat_agent_creation_count_by_user_domain` | gauge | `email_domain`          | Agents created, grouped by author domain.    |
 | `librechat_agent_usage_by_domain_count`         | gauge | `agent`, `email_domain` | Usage count per agent + user domain.         |
-| `librechat_agent_usage_by_user_count`           | gauge | `agent`, `email`        | Gated by `EMIT_PER_USER_METRICS=true`.       |
+| `librechat_agent_usage_by_user_count`           | gauge | `agent`, `id`           | Gated by `EMIT_PER_USER_METRICS=true`. `id` is the user's Mongo `_id` by default, or email when `ANONYMIZE_EMAIL_LABEL=false`. |
 | `librechat_assistant_usage_count`               | gauge | `assistant`             | Assistant invocation count.                  |
 | `librechat_model_usage_count`                   | gauge | `model`                 | Per-model message count.                     |
 | `librechat_tool_call_count_by_tool`             | gauge | `toolId`                | Tool-call counts.                            |

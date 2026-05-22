@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # Stage 1: Build TypeScript
-FROM node:25-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN npm run build
 # Stage 2: Install production dependencies only
 # Uses the same uid as the runtime base (chainguard uid 65532) so the
 # files copied across already have correct ownership at runtime.
-FROM node:25-alpine AS deps
+FROM node:26-alpine AS deps
 
 WORKDIR /app
 

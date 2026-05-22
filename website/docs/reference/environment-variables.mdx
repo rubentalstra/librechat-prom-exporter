@@ -17,14 +17,16 @@ All settings are read from environment variables at boot. The exporter uses [zod
 | `MONGO_POOL_SIZE`           | `50`                                             | `maxPoolSize` passed to `mongoose.connect`.                                                                                                                                                                                   |
 | `REFRESH_INTERVAL`          | `30000`                                          | Interval in ms for the **basic** metrics scrape (cheap, runs often).                                                                                                                                                          |
 | `ADVANCED_REFRESH_INTERVAL` | `REFRESH_INTERVAL × 10`                          | Interval in ms for the **advanced** metrics scrape (heavy `$facet` aggregations, runs on a separate timer so a slow advanced cycle never blocks basic).                                                                       |
+| `CARDINALITY_REFRESH_INTERVAL` | `ADVANCED_REFRESH_INTERVAL`                   | Interval in ms for the **cardinality** scrape (per-user `id`-labeled metrics). A no-op (no Mongo queries) when `EMIT_PER_USER_METRICS=false`.                                                                                  |
 | `LOG_TIMINGS`               | `false`                                          | When `true`, prints per-scrape and per-section timing logs. Per-section durations are always exposed as the `librechat_exporter_section_duration_seconds` histogram regardless. Accepts `true` or `false` (case-insensitive). |
 
 ## Cardinality and tenancy
 
-| Variable                | Default   | Description                                                                                                                                                                                 |
-| ----------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EMIT_PER_USER_METRICS` | `false`   | When `true`, emits three high-cardinality `email`-labeled metrics — one Prometheus series per user. **Off by default** to protect large deployments. See [Cardinality](#cardinality) below. |
-| `TENANT_ID`             | _(unset)_ | When set, installs mongoose schema hooks that scope every aggregate / find / count query to the named tenant. Leave unset on single-tenant LibreChat installs (the default).                |
+| Variable                  | Default   | Description                                                                                                                                                                                                                                                              |
+| ------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `EMIT_PER_USER_METRICS`   | `false`   | When `true`, emits three high-cardinality `id`-labeled metrics — one Prometheus series per user. **Off by default** to protect large deployments. See [Cardinality](#cardinality) below.                                                                                 |
+| `ANONYMIZE_EMAIL_LABEL`   | `true`    | Controls the value of the `id` label on the three cardinality metrics. When `true` (default), the value is the user's Mongo `_id` (24-char ObjectId). When `false`, it's the real email address. The label name stays `id` either way so dashboards don't need to change. |
+| `TENANT_ID`               | _(unset)_ | When set, installs mongoose schema hooks that scope every aggregate / find / count query to the named tenant. Leave unset on single-tenant LibreChat installs (the default).                                                                                             |
 
 ## HTTP server hardening
 
@@ -65,14 +67,16 @@ EMIT_PER_USER_METRICS=false
 ## Cardinality
 
 :::warning[Why this matters]
-Prometheus charges (and slows down) per **unique label combination**, not per metric. Adding a label with many possible values (like `email`) creates one time series per value — easily tens of thousands on a busy LibreChat install.
+Prometheus charges (and slows down) per **unique label combination**, not per metric. Adding a per-user label creates one time series per value — easily tens of thousands on a busy LibreChat install.
 :::
 
-Three metrics carry an `email` label and emit one Prometheus series per user. On large deployments this grows unbounded, so they are gated behind `EMIT_PER_USER_METRICS=true`:
+Three metrics carry an `id` label and emit one Prometheus series per user. On large deployments this grows unbounded, so they are gated behind `EMIT_PER_USER_METRICS=true`:
 
-- `librechat_transaction_cost_by_user{email}`
-- `librechat_transaction_token_sum_by_model_user{model,tokenType,email}`
-- `librechat_agent_usage_by_user_count{agent,email}`
+- `librechat_transaction_cost_by_user{id}`
+- `librechat_transaction_token_sum_by_model_user{model,tokenType,id}`
+- `librechat_agent_usage_by_user_count{agent,id}`
+
+By default (`ANONYMIZE_EMAIL_LABEL=true`) the `id` label carries the user's Mongo `_id`. Set `ANONYMIZE_EMAIL_LABEL=false` if you want the real email address as the label value instead. These metrics live on their own scrape loop (`CARDINALITY_REFRESH_INTERVAL`) so you can refresh them less often than the rest of the advanced tier — for example only twice a day.
 
 The corresponding `*_by_email_domain` variants are bounded by company-domain count and remain enabled by default.
 
