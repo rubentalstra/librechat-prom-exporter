@@ -46,6 +46,14 @@ jobs:
           # against repo rename.
           package: librechat-prom-exporter
 
+          # Permanent preservation list. Apply an `archive-<short-digest>`
+          # tag to any historically-popular untagged digest you want to
+          # keep reachable by digest pin (e.g. consumers using
+          # `image@sha256:...` references). exclude-tags has top priority
+          # in this action — archived manifests are removed from the
+          # working set before any delete rule runs.
+          exclude-tags: "archive-*"
+
           # Untagged cleanup: keep the newest 5 truly-untagged digests
           # and delete the rest. Per-arch children of tagged indexes,
           # cosign sigs, and attestation referrers are excluded from

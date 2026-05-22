@@ -1,0 +1,18 @@
+packages:
+  - "website"
+
+# Native postinstall scripts we trust:
+# - @swc/core: Speedy Web Compiler native binary (used by Docusaurus)
+# - esbuild: installs the platform binary (used by vitest + tsx)
+# - mongodb-memory-server: downloads the mongod binary for integration tests
+# - unrs-resolver: native N-API resolver used by eslint-plugin-import-x
+# core-js postinstall is just a sponsor banner — skip.
+allowBuilds:
+  "@swc/core": true
+  core-js: false
+  esbuild: true
+  mongodb-memory-server: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - helmet@8.2.0

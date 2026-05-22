@@ -1,0 +1,38 @@
+---
+title: Tuning
+description: Performance and cardinality knobs to think about before running at scale.
+sidebar_position: 2
+---
+
+# Tuning
+
+A few knobs worth thinking about before turning on the exporter at scale.
+
+## `MONGO_POOL_SIZE` (default `50`)
+
+Sets `maxPoolSize` on the mongoose connection. The advanced scrape fans many aggregations out in parallel via `Promise.all`; if you see queries serialize on small deployments, the pool is the first place to look. Most LibreChat installs are fine at the default.
+
+## `ADVANCED_REFRESH_INTERVAL` (default `REFRESH_INTERVAL × 10`, i.e. 300 s)
+
+The heavy `$facet` aggregations run at this cadence. On very large message/transaction collections you may want this longer (e.g. `600000` for 10-minute granularity) to reduce Mongo load. The basic counts continue to refresh on `REFRESH_INTERVAL`.
+
+## `REFRESH_INTERVAL` (default `30000`)
+
+Cheap `countDocuments` per collection. Going much lower than 10 s is usually wasted load — Prometheus typically scrapes every 15 – 30 s anyway. There's no benefit to refreshing faster than the scrape cadence.
+
+## `EMIT_PER_USER_METRICS=true`
+
+Only enable on small / single-tenant deployments. Three metrics gain an `email` label and emit one Prometheus time series per user (**unbounded** growth). The corresponding `*_by_email_domain` variants stay enabled regardless and are bounded by company-domain count.
+
+## `TENANT_ID`
+
+When set, installs schema-level mongoose hooks that inject `{ $match: { tenantId } }` into every aggregate / find / count. Use this when one MongoDB serves multiple LibreChat tenants and you want metrics scoped to one of them.
+
+## Reentrancy
+
+Each tier (basic / advanced) holds a per-tier "running" flag and **skips a tick if the previous one is still in flight**. You will see a warn log on each skipped tick (`basic scrape still running, skipping this tick`); these are informational, not errors.
+
+Persistent skipping means the scrape budget is too tight — either:
+
+- raise `ADVANCED_REFRESH_INTERVAL`, or
+- look at index coverage via the `librechat_exporter_missing_indexes` gauge and add the recommended indexes Mongo-side.

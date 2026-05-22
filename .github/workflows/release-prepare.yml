@@ -34,23 +34,27 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.0.5
+
       - uses: actions/setup-node@v6
         with:
-          node-version: "24.x"
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - name: Bump root package.json
-        run: npm version --no-git-tag-version "$VERSION"
+        run: pnpm version --no-git-tag-version "$VERSION"
+
+      - name: Install (workspace, root)
+        run: pnpm install --frozen-lockfile
 
       - name: Snapshot docs site
-        working-directory: website
         run: |
           set -euo pipefail
-          npm ci
-          if [ -d "versioned_docs/version-${MAJOR_MINOR}" ]; then
+          if [ -d "website/versioned_docs/version-${MAJOR_MINOR}" ]; then
             echo "Snapshot version-${MAJOR_MINOR} already exists; skipping."
           else
-            npm run docusaurus -- docs:version "$MAJOR_MINOR"
+            pnpm --filter ./website docusaurus docs:version "$MAJOR_MINOR"
           fi
 
       # Note: PRs opened with GITHUB_TOKEN do NOT trigger other workflows
@@ -70,7 +74,7 @@ jobs:
           body: |
             Automated release-prep PR for **v${{ inputs.version }}**.
 
-            - Bumps `package.json` + `package-lock.json` to `${{ inputs.version }}`.
+            - Bumps `package.json` + `pnpm-lock.yaml` to `${{ inputs.version }}`.
             - Snapshots the docs site as version `${{ env.MAJOR_MINOR }}` (no-op if it already exists).
 
             ### After merging

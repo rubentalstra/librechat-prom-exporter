@@ -20,17 +20,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.0.5
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "25.x"
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: Audit vulnerabilities with npm
-        run: npm audit --production --audit-level=high
+      - name: Audit vulnerabilities
+        run: pnpm audit --prod --audit-level=high
 
       - name: (Optional) Scan for vulnerabilities with Snyk
         if: env.SNYK_TOKEN != ''
@@ -39,7 +42,7 @@ jobs:
           args: --severity-threshold=high
 
       - name: List outdated dependencies (informational)
-        run: npm outdated || true
+        run: pnpm outdated || true
 
       # Weekly scan of the PUBLISHED image. Catches CVEs introduced after
       # the last CD push (e.g., base-image rebuild, new Debian advisory).

@@ -31,6 +31,8 @@
     "@docusaurus/module-type-aliases": "3.10.1",
     "@docusaurus/tsconfig": "3.10.1",
     "@docusaurus/types": "3.10.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
     "typescript": "~6.0.3"
   },
   "browserslist": {
@@ -47,5 +49,6 @@
   },
   "engines": {
     "node": ">=22.0"
-  }
+  },
+  "packageManager": "pnpm@11.2.2"
 }

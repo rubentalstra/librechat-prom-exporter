@@ -21,13 +21,11 @@ import {
 
 import { extractEmailDomain } from "./util.js";
 
-// Per-user `email`-labeled metrics are unbounded in cardinality (one series
-// per user, retained by prom-client for the process lifetime). Default off
-// to protect large deployments; set EMIT_PER_USER_METRICS=true to enable.
-function emitPerUser(): boolean {
-  return getConfig().EMIT_PER_USER_METRICS;
-}
-// Domain-level (`*_by_email_domain`) metrics remain on regardless.
+// Per-user `email`-labeled metrics live in `cardinalityGauges` (see
+// ./cardinalityMetrics.ts) and are emitted by their own scrape loop on
+// `CARDINALITY_REFRESH_INTERVAL`. The advanced scrape no longer touches
+// them. Domain-level (`*_by_email_domain`) metrics defined below remain
+// on regardless and are safe by default.
 
 export const advancedGauges = {
   // Message metrics
@@ -253,11 +251,7 @@ export const advancedGauges = {
     help: "Sum of tokens (absolute rawAmount) per model and user email domain",
     labelNames: ["model", "tokenType", "email_domain"],
   }),
-  transactionTokenSumByModelUser: new client.Gauge({
-    name: "librechat_transaction_token_sum_by_model_user",
-    help: "Sum of tokens (absolute rawAmount) per model and user email",
-    labelNames: ["model", "tokenType", "email"],
-  }),
+  // `transactionTokenSumByModelUser` moved to cardinalityGauges.
 
   // Action metrics
   actionCountByType: new client.Gauge({
@@ -282,11 +276,7 @@ export const advancedGauges = {
     help: "Usage count for each agent grouped by user email domain",
     labelNames: ["agent", "email_domain"],
   }),
-  agentUsageByUserCount: new client.Gauge({
-    name: "librechat_agent_usage_by_user_count",
-    help: "Usage count for each agent grouped by user email",
-    labelNames: ["agent", "email"],
-  }),
+  // `agentUsageByUserCount` moved to cardinalityGauges.
   assistantUsageCount: new client.Gauge({
     name: "librechat_assistant_usage_count",
     help: "Usage count for each assistant",
@@ -434,11 +424,7 @@ export const advancedGauges = {
     help: "Total transaction cost in USD grouped by user email domain",
     labelNames: ["email_domain"],
   }),
-  transactionCostByUser: new client.Gauge({
-    name: "librechat_transaction_cost_by_user",
-    help: "Total transaction cost in USD grouped by user email",
-    labelNames: ["email"],
-  }),
+  // `transactionCostByUser` moved to cardinalityGauges.
   transactionCostByAgent: new client.Gauge({
     name: "librechat_transaction_cost_by_agent",
     help: "Total transaction cost in USD grouped by agent (derived from conversations using the agent)",
@@ -1255,19 +1241,11 @@ export async function updateAdvancedMetrics(): Promise<void> {
       tokens: row.tokens,
     }));
 
-    advancedGauges.transactionTokenSumByModelUser.reset();
     advancedGauges.transactionTokenSumByModelDomain.reset();
     const tokensByModelDomain: Map<string, number> = new Map();
     for (const row of tokensByModelUserAgg) {
       const email = row.email || "unknown";
       const emailDomain = extractEmailDomain(email);
-
-      if (emitPerUser()) {
-        advancedGauges.transactionTokenSumByModelUser.set(
-          { model: row.model, tokenType: row.tokenType, email },
-          row.tokens,
-        );
-      }
 
       const domainKey = `${row.model}\u0000${row.tokenType}\u0000${emailDomain}`;
       tokensByModelDomain.set(domainKey, (tokensByModelDomain.get(domainKey) || 0) + row.tokens);
@@ -1305,7 +1283,6 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.agentUsageCount.reset();
     advancedGauges.assistantUsageCount.reset();
     advancedGauges.agentUsageByDomainCount.reset();
-    advancedGauges.agentUsageByUserCount.reset();
 
     for (const result of deployedModelsAgg) {
       const id: string = result._id;
@@ -1352,10 +1329,6 @@ export async function updateAdvancedMetrics(): Promise<void> {
       const agent = agentMap.get(agentId)!;
       const email = userIdToEmail.get(String(row._id.user)) || "unknown";
       const emailDomain = extractEmailDomain(email);
-
-      if (emitPerUser()) {
-        advancedGauges.agentUsageByUserCount.set({ agent, email }, row.count);
-      }
 
       const domainKey = `${agent}|${emailDomain}`;
       agentDomainCounts.set(domainKey, (agentDomainCounts.get(domainKey) || 0) + row.count);
@@ -1743,15 +1716,11 @@ export async function updateAdvancedMetrics(): Promise<void> {
     advancedGauges.transactionCost7d.set(costByWindowAgg?.c7d[0]?.total || 0);
     advancedGauges.transactionCost30d.set(costByWindowAgg?.c30d[0]?.total || 0);
 
-    advancedGauges.transactionCostByUser.reset();
     advancedGauges.transactionCostByEmailDomain.reset();
     const costByDomainMap: Map<string, number> = new Map();
     for (const row of costByDomainUserAgg) {
       const email = userIdToEmail.get(String(row._id)) || "unknown";
       const domain = extractEmailDomain(email);
-      if (emitPerUser()) {
-        advancedGauges.transactionCostByUser.set({ email }, row.cost);
-      }
       costByDomainMap.set(domain, (costByDomainMap.get(domain) || 0) + row.cost);
     }
     for (const [email_domain, cost] of costByDomainMap.entries()) {

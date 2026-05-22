@@ -16,27 +16,26 @@ jobs:
   lighthouse:
     name: Audit
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: website
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.0.5
+
       - uses: actions/setup-node@v6
         with:
-          node-version: "24.x"
-          cache: "npm"
-          cache-dependency-path: website/package-lock.json
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build (baseUrl=/ so lhci's static server can serve at root)
         env:
           LIGHTHOUSE_BUILD: "true"
-        run: npm run build
+        run: pnpm --filter ./website build
 
       - name: Run Lighthouse
         uses: treosh/lighthouse-ci-action@v12

@@ -19,25 +19,24 @@ jobs:
   test-build:
     name: Test build
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: website
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.0.5
+
       - uses: actions/setup-node@v6
         with:
-          node-version: "24.x"
-          cache: "npm"
-          cache-dependency-path: website/package-lock.json
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Type check
-        run: npm run typecheck
+        run: pnpm --filter ./website typecheck
 
       - name: Build
-        run: npm run build
+        run: pnpm --filter ./website build

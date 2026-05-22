@@ -1,0 +1,83 @@
+---
+slug: v0.10.0
+title: v0.10.0 — pnpm migration, ESLint v10, TypeScript 6
+authors: [rubentalstra]
+tags: [release, tooling]
+date: 2026-05-22
+---
+
+v0.10.0 is a contributor-experience release. The runtime image, the metrics it emits, and every environment variable it accepts are unchanged — but the dev tooling underneath got a serious refit. Most operators can pull `0.10.0` as a drop-in replacement for `0.9.0`. Contributors will need `corepack` enabled (a one-time command).
+
+{/* truncate */}
+
+### Why this release exists
+
+For weeks, CI kept failing on PRs with the same baffling error:
+
+```
+npm error Missing: @emnapi/core@1.10.0 from lock file
+npm error Missing: @emnapi/runtime@1.10.0 from lock file
+```
+
+…even though nothing about `@emnapi` had been touched. Root cause: npm strips platform-conditional optional dependencies (`@emnapi/*`, `@img/sharp-*`, `lightningcss-*` and friends) from `package-lock.json` based on whichever host produced the install. macOS contributors would commit a `package-lock.json` that worked locally but was missing entries the Linux CI runner needed. Reverse drift on the next push from a different machine.
+
+This is a [known npm bug class](https://github.com/npm/cli/issues/4828) with no clean fix on npm's side. It IS fixed by design in pnpm: its lockfile records the complete platform-conditional graph and applies `os` / `cpu` / `libc` filters at install time, not at lock time. So the migration was the actual fix — not a cosmetic preference.
+
+### Package manager: npm → pnpm 11.2.2
+
+- **`packageManager: pnpm@11.2.2`** pinned with the full Corepack-written SHA. Local devs, CI, and Docker all resolve the exact same pnpm binary. Dependabot can PR pnpm upgrades.
+- **Single `pnpm-lock.yaml`** at repo root replaces the two old `package-lock.json` files. A new `pnpm-workspace.yaml` declares `website` as a workspace member, so `pnpm install` from the root resolves both the exporter and the docs site in one pass.
+- **Trusted build scripts** are listed explicitly in `pnpm-workspace.yaml` (`allowBuilds: { esbuild: true, mongodb-memory-server: true, "@swc/core": true, unrs-resolver: true, "core-js": false }`). pnpm v11 blocks unknown postinstalls by default; this list is the supply-chain audit trail.
+- **Dockerfile** builder + deps stages now run `corepack enable` + `pnpm install --frozen-lockfile --filter "librechat-prom-exporter..."` with a BuildKit pnpm-store cache mount. The `--filter pkg...` keeps the docs-site deps out of the runtime image. The Chainguard runtime stage is unchanged.
+- **All 7 GitHub Actions workflows** were migrated to `pnpm/action-setup@v6.0.5` + `actions/setup-node@v6` with `cache: 'pnpm'`. The docs workflows (`docs-deploy.yml`, `docs-test-deploy.yml`, `docs-lighthouse.yml`) drop the per-job `cd website` dance — they install once at root and run their tasks via `pnpm --filter ./website ...`.
+
+### CI lockfile-drift guardrail
+
+To make sure the `@emnapi`-class drift never silently comes back, `ci.yml` now runs **after** the frozen install:
+
+```bash
+pnpm install --lockfile-only
+git diff --exit-code pnpm-lock.yaml
+```
+
+Any future `package.json` ↔ lockfile mismatch fails the build with a clean diff in the run log. Locally, `.npmrc` carries `verify-deps-before-run=true` so `pnpm <script>` refuses to run against a stale `node_modules` — same protection, two layers.
+
+### ESLint v10 + TypeScript 6
+
+- **ESLint upgraded to v10.** Config rewritten flat-native using the new `typescript-eslint` aggregator and `eslint-plugin-import-x` (a maintained drop-in replacement for the unmaintained `eslint-plugin-import`, which has no published v10-compatible release on npm yet). `FlatCompat`, `@eslint/compat`, `@eslint/eslintrc`, and the unused `eslint-plugin-jest` registration (project uses vitest) all removed. The lint script no longer needs the legacy `--ext .ts` flag — `eslint .` does the right thing under flat config. Side effect: the 57k pre-existing "errors" coming from `website/.docusaurus/` generated JS during lint are now gone, because file scope finally lives in the config where it belongs.
+- **TypeScript upgraded to 6.0.3.** Typecheck stays clean across the whole tree.
+- **Docker base bumped** from `node:25-alpine` to `node:26-alpine` for the build stages. Chainguard runtime already tracked Node 26.
+
+### Cardinality scrape polish
+
+A small follow-up to the per-user metrics that landed in [v0.9.0](/blog/v0.9.0): when `ANONYMIZE_EMAIL_LABEL=true` (the default), the cardinality scrape used to load every user from Mongo just to build an identity map (`id → id`) it never actually needed. The map's been removed, the three emit loops collapse into a single `labelFor()` closure, and one full `User.find` per cardinality tick is gone. No behavior change.
+
+### Docs site
+
+- **Versioned docs are now actually wired up.** Snapshot of the docs at v0.10.0 lives in `website/versioned_docs/version-0.10/` and the version dropdown serves it under `/docs/0.10/`. Unreleased work-in-progress moves to `/docs/next/` and is banner-tagged so visitors don't accidentally trust pre-release content. Future releases need only `pnpm --filter ./website docusaurus docs:version <X.Y>` plus a package.json bump — the rest of the config is dynamic.
+- **Doc fixes for the cardinality metrics** that shipped in v0.9.0 — the three high-cardinality gauges always emitted an `id` label, but `metrics.mdx` and `environment-variables.mdx` were stuck saying `email`. Both documents also now describe the `ANONYMIZE_EMAIL_LABEL` and `CARDINALITY_REFRESH_INTERVAL` env vars that landed in v0.9.0.
+- **`CHANGELOG.md` at repo root** in Keep-a-Changelog format. Release notes from v0.10.0 forward live there in addition to the GitHub Release and this blog.
+
+### Upgrading
+
+**Operators** — drop-in replacement:
+
+```bash
+docker pull ghcr.io/rubentalstra/librechat-prom-exporter:0.10.0
+```
+
+No env-var changes, no metric renames, no breaking behavior. The `@emnapi`-class CI failures that occasionally blocked PRs to your forks are also fixed structurally.
+
+**Contributors** — one-time setup:
+
+```bash
+corepack enable          # lets Node manage the pinned pnpm binary
+pnpm install             # at repo root; resolves exporter + docs in one pass
+pnpm test:run            # confirm
+```
+
+`npm install` will refuse to run because of `packageManager`. If you want a refresher on the new commands, [Local setup](/docs/installation/local) is up to date.
+
+### Dependabot cleanup
+
+Closed 12 stale Dependabot PRs along the way (`#194`, `#196`, `#197`, `#198`, `#199`, `#200`, `#201`, `#202`, `#210`, `#211`, `#213`, `#214`) — most were either already past their target version on `dev`, or applied transitively by this release's bumps. The only Dependabot PR still open is `#212` (mongoose 9.x), deliberately deferred for a focused PR with proper query-by-query review.
