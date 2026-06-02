@@ -3,6 +3,8 @@ import client from "prom-client";
 import { getConfig } from "../config.js";
 import { Agent, Message, Transaction, User } from "../models/index.js";
 
+import { deriveUserLabel } from "./util.js";
+
 /**
  * Cardinality metrics are advanced metrics whose label sets are unbounded in
  * series count (currently: per-user gauges labeled with `id`). They are
@@ -37,21 +39,21 @@ export const cardinalityGauges = {
   // Total transaction cost in USD per user.
   transactionCostByUser: new client.Gauge({
     name: "librechat_transaction_cost_by_user",
-    help: "Total transaction cost in USD grouped by user (id = Mongo _id by default, or email when ANONYMIZE_EMAIL_LABEL=false)",
+    help: "Total transaction cost in USD grouped by user (id = Mongo _id by default, email when ANONYMIZE_EMAIL_LABEL=false, or HMAC-SHA256 hex when METRICS_USER_ID_SALT is set)",
     labelNames: ["id"],
   }),
 
   // Sum of tokens (absolute rawAmount) per model and user.
   transactionTokenSumByModelUser: new client.Gauge({
     name: "librechat_transaction_token_sum_by_model_user",
-    help: "Sum of tokens (absolute rawAmount) per model and user (id = Mongo _id by default, or email when ANONYMIZE_EMAIL_LABEL=false)",
+    help: "Sum of tokens (absolute rawAmount) per model and user (id = Mongo _id by default, email when ANONYMIZE_EMAIL_LABEL=false, or HMAC-SHA256 hex when METRICS_USER_ID_SALT is set)",
     labelNames: ["model", "tokenType", "id"],
   }),
 
   // Agent usage count per (agent, user) pair.
   agentUsageByUserCount: new client.Gauge({
     name: "librechat_agent_usage_by_user_count",
-    help: "Usage count for each agent grouped by user (id = Mongo _id by default, or email when ANONYMIZE_EMAIL_LABEL=false)",
+    help: "Usage count for each agent grouped by user (id = Mongo _id by default, email when ANONYMIZE_EMAIL_LABEL=false, or HMAC-SHA256 hex when METRICS_USER_ID_SALT is set)",
     labelNames: ["agent", "id"],
   }),
 };
@@ -167,7 +169,9 @@ export async function updateCardinalityMetrics(): Promise<void> {
   // --- Emit ---
   resetAll();
 
-  const labelFor = (userId: string): string => (anonymize ? userId : userIdToEmail.get(userId) || "unknown");
+  const salt = getConfig().METRICS_USER_ID_SALT;
+  const labelFor = (userId: string): string =>
+    salt ? deriveUserLabel(userId, salt) : anonymize ? userId : userIdToEmail.get(userId) || "unknown";
 
   for (const row of byUser) {
     cardinalityGauges.transactionCostByUser.set({ id: labelFor(String(row._id)) }, row.cost);

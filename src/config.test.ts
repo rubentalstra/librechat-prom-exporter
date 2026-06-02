@@ -126,6 +126,16 @@ describe("loadConfig", () => {
     expect(cfg.TENANT_ID).toBeUndefined();
   });
 
+  it("defaults METRICS_USER_ID_SALT to undefined", () => {
+    const cfg = loadConfig(baseEnv);
+    expect(cfg.METRICS_USER_ID_SALT).toBeUndefined();
+  });
+
+  it("accepts METRICS_USER_ID_SALT", () => {
+    const cfg = loadConfig({ ...baseEnv, METRICS_USER_ID_SALT: "super-secret" });
+    expect(cfg.METRICS_USER_ID_SALT).toBe("super-secret");
+  });
+
   it("collects multiple errors in one throw", () => {
     let err: Error | undefined;
     try {

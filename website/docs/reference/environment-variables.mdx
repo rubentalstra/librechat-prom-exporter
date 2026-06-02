@@ -22,11 +22,12 @@ All settings are read from environment variables at boot. The exporter uses [zod
 
 ## Cardinality and tenancy
 
-| Variable                | Default   | Description                                                                                                                                                                                                                                                               |
-| ----------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EMIT_PER_USER_METRICS` | `false`   | When `true`, emits three high-cardinality `id`-labeled metrics — one Prometheus series per user. **Off by default** to protect large deployments. See [Cardinality](#cardinality) below.                                                                                  |
-| `ANONYMIZE_EMAIL_LABEL` | `true`    | Controls the value of the `id` label on the three cardinality metrics. When `true` (default), the value is the user's Mongo `_id` (24-char ObjectId). When `false`, it's the real email address. The label name stays `id` either way so dashboards don't need to change. |
-| `TENANT_ID`             | _(unset)_ | When set, installs mongoose schema hooks that scope every aggregate / find / count query to the named tenant. Leave unset on single-tenant LibreChat installs (the default).                                                                                              |
+| Variable                 | Default   | Description                                                                                                                                                                                                                                                                     |
+| ------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMIT_PER_USER_METRICS`  | `false`   | When `true`, emits three high-cardinality `id`-labeled metrics — one Prometheus series per user. **Off by default** to protect large deployments. See [Cardinality](#cardinality) below.                                                                                        |
+| `ANONYMIZE_EMAIL_LABEL`  | `true`    | Controls the value of the `id` label on the three cardinality metrics. When `true` (default), the value is the user's Mongo `_id` (24-char ObjectId). When `false`, it's the real email address. The label name stays `id` either way so dashboards don't need to change.       |
+| `METRICS_USER_ID_SALT`   | _(unset)_ | Optional secret salt. When set, the `id` label becomes a **pseudonymous 16-char HMAC-SHA256** hex value instead of the raw MongoDB id or email. This prevents anyone with `/metrics` access from cross-referencing users against the database, even if `ANONYMIZE_EMAIL_LABEL=false`. |
+| `TENANT_ID`              | _(unset)_ | When set, installs mongoose schema hooks that scope every aggregate / find / count query to the named tenant. Leave unset on single-tenant LibreChat installs (the default).                                                                                                    |
 
 ## HTTP server hardening
 
@@ -79,5 +80,13 @@ Three metrics carry an `id` label and emit one Prometheus series per user. On la
 By default (`ANONYMIZE_EMAIL_LABEL=true`) the `id` label carries the user's Mongo `_id`. Set `ANONYMIZE_EMAIL_LABEL=false` if you want the real email address as the label value instead. These metrics live on their own scrape loop (`CARDINALITY_REFRESH_INTERVAL`) so you can refresh them less often than the rest of the advanced tier — for example only twice a day.
 
 The corresponding `*_by_email_domain` variants are bounded by company-domain count and remain enabled by default.
+
+### Pseudonymizing user labels
+
+When `METRICS_USER_ID_SALT` is set, each `id` label is replaced with a deterministic, 16-character HMAC-SHA256 hex value:
+
+- The same LibreChat user always maps to the same `id` across scrapes, so Grafana graphs remain continuous.
+- Without the salt, the label cannot be reversed back to the original user id or email — even with full database access.
+- Use a long, random string for the salt (e.g., `openssl rand -hex 32`).
 
 See the [Adding a metric](../contributing/adding-a-metric) playbook for the cardinality budget rules new metrics should follow.

@@ -77,6 +77,8 @@ const Schema = z
     ANONYMIZE_EMAIL_LABEL: boolish.default(true),
     TENANT_ID: optionalTrimmed,
 
+    METRICS_USER_ID_SALT: optionalTrimmed,
+
     TRUST_PROXY: z.string().default("loopback"),
     RATE_LIMIT_WINDOW_MS: positiveInt.default(60_000),
     RATE_LIMIT_MAX: positiveInt.default(120),
