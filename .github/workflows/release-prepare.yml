@@ -30,14 +30,14 @@ jobs:
           fi
           echo "MAJOR_MINOR=${VERSION%.*}" >> "$GITHUB_ENV"
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6.0.5
+        uses: pnpm/action-setup@v6.0.9
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           cache: "pnpm"
