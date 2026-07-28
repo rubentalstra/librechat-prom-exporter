@@ -51,7 +51,7 @@
     "helmet": "^8.2.0",
     "ipaddr.js": "^2.4.0",
     "jose": "^6.2.3",
-    "librechat-data-provider": "^0.8.502",
+    "librechat-data-provider": "^0.8.503",
     "mongoose": "^8.24.0",
     "pino": "^10.3.1",
     "prom-client": "^15.1.3",
