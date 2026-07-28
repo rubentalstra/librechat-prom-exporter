@@ -43,7 +43,7 @@
   },
   "packageManager": "pnpm@11.2.2",
   "dependencies": {
-    "@librechat/data-schemas": "^0.0.51",
+    "@librechat/data-schemas": "^0.0.52",
     "compression": "^1.8.1",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
