@@ -4,6 +4,7 @@ import { getConfig } from "../config.js";
 import { logger } from "../logger.js";
 import {
   Message,
+  Balance,
   Banner,
   File,
   Agent,
@@ -424,6 +425,11 @@ export const advancedGauges = {
     help: "Total transaction cost in USD grouped by user email domain",
     labelNames: ["email_domain"],
   }),
+  balanceCreditsByEmailDomain: new client.Gauge({
+    name: "librechat_balance_credits_by_email_domain",
+    help: "Total current balance in raw tokenCredits summed per user email domain (1e6 tokenCredits = $1 USD)",
+    labelNames: ["email_domain"],
+  }),
   // `transactionCostByUser` moved to cardinalityGauges.
   transactionCostByAgent: new client.Gauge({
     name: "librechat_transaction_cost_by_agent",
@@ -632,6 +638,19 @@ function bucketUserIdsByDomain(
     counts.set(domain, (counts.get(domain) || 0) + 1);
   }
   return Array.from(counts.entries()).map(([domain, count]) => ({ domain, count }));
+}
+
+export function sumCreditsByEmailDomain(
+  balances: Array<{ user: unknown; tokenCredits?: number | null }>,
+  userIdToEmail: Map<string, string>,
+): Array<{ domain: string; credits: number }> {
+  const credits: Map<string, number> = new Map();
+  for (const balance of balances) {
+    const email = userIdToEmail.get(String(balance.user)) || "unknown";
+    const domain = extractEmailDomain(email);
+    credits.set(domain, (credits.get(domain) || 0) + (balance.tokenCredits ?? 0));
+  }
+  return Array.from(credits.entries()).map(([domain, sum]) => ({ domain, credits: sum }));
 }
 
 export async function updateAdvancedMetrics(): Promise<void> {
@@ -1726,6 +1745,16 @@ export async function updateAdvancedMetrics(): Promise<void> {
     for (const [email_domain, cost] of costByDomainMap.entries()) {
       advancedGauges.transactionCostByEmailDomain.set({ email_domain }, cost);
     }
+
+    // Current balance (raw tokenCredits) summed per user email domain. Reuses
+    // the in-JS userIdToEmail join instead of a $lookup against `users`. The
+    // balances collection is small (one doc per user), so a lean read is cheap.
+    const balanceDocs = await Balance.find({}, { user: 1, tokenCredits: 1 }).lean();
+    advancedGauges.balanceCreditsByEmailDomain.reset();
+    for (const { domain, credits } of sumCreditsByEmailDomain(balanceDocs, userIdToEmail)) {
+      advancedGauges.balanceCreditsByEmailDomain.set({ email_domain: domain }, credits);
+    }
+    __mark("Balance Metrics");
 
     // Tokens per message + prompt/completion ratio per model
     const tokensByModelTotal: Map<string, number> = new Map();

@@ -1,7 +1,7 @@
 import client from "prom-client";
 
 import { getConfig } from "../config.js";
-import { Agent, Message, Transaction, User } from "../models/index.js";
+import { Agent, Balance, Message, Transaction, User } from "../models/index.js";
 
 import { deriveUserLabel } from "./util.js";
 
@@ -50,18 +50,41 @@ export const cardinalityGauges = {
     labelNames: ["model", "tokenType", "id"],
   }),
 
+  // Sum of tokens (absolute rawAmount) per user, with model/tokenType
+  // collapsed away. Low-cardinality companion to transactionTokenSumByModelUser
+  // (one series per user instead of per user*model*tokenType) — use this one
+  // whenever only the per-user total is needed, since aggregating the
+  // model/tokenType-crossed metric at query time is expensive at high user
+  // counts.
+  transactionTokenSumByUser: new client.Gauge({
+    name: "librechat_transaction_token_sum_by_user",
+    help: "Sum of tokens (absolute rawAmount) per user, across all models/tokenTypes (id = Mongo _id by default, email when ANONYMIZE_EMAIL_LABEL=false, or HMAC-SHA256 hex when METRICS_USER_ID_SALT is set)",
+    labelNames: ["id"],
+  }),
+
   // Agent usage count per (agent, user) pair.
   agentUsageByUserCount: new client.Gauge({
     name: "librechat_agent_usage_by_user_count",
     help: "Usage count for each agent grouped by user (id = Mongo _id by default, email when ANONYMIZE_EMAIL_LABEL=false, or HMAC-SHA256 hex when METRICS_USER_ID_SALT is set)",
     labelNames: ["agent", "id"],
   }),
+
+  // Current balance (raw tokenCredits) per user. Only users with a Balance
+  // document produce a series; a user with a document but zero credits emits
+  // 0, while a user with no document at all produces no series.
+  balanceCreditsByUser: new client.Gauge({
+    name: "librechat_balance_credits_by_user",
+    help: "Current balance in raw tokenCredits per user (1e6 tokenCredits = $1 USD; id = Mongo _id by default, email when ANONYMIZE_EMAIL_LABEL=false, or HMAC-SHA256 hex when METRICS_USER_ID_SALT is set)",
+    labelNames: ["id"],
+  }),
 };
 
 function resetAll(): void {
   cardinalityGauges.transactionCostByUser.reset();
   cardinalityGauges.transactionTokenSumByModelUser.reset();
+  cardinalityGauges.transactionTokenSumByUser.reset();
   cardinalityGauges.agentUsageByUserCount.reset();
+  cardinalityGauges.balanceCreditsByUser.reset();
 }
 
 export async function updateCardinalityMetrics(): Promise<void> {
@@ -97,6 +120,7 @@ export async function updateCardinalityMetrics(): Promise<void> {
         _id: { model: string; user: unknown; tokenType: string };
         tokens: number;
       }>;
+      byUserTokens: Array<{ _id: unknown; tokens: number }>;
     }>
   > = Transaction.aggregate(
     [
@@ -126,6 +150,7 @@ export async function updateCardinalityMetrics(): Promise<void> {
               },
             },
           ],
+          byUserTokens: [{ $group: { _id: "$user", tokens: { $sum: { $abs: "$rawAmount" } } } }],
         },
       },
     ],
@@ -151,10 +176,23 @@ export async function updateCardinalityMetrics(): Promise<void> {
     { allowDiskUse: true },
   );
 
-  const [transactionAgg, agentUsageByUserAgg] = await Promise.all([transactionAggPromise, agentUsageByUserAggPromise]);
+  // --- Balance-derived: current tokenCredits per user ---
+  // A single lean read of the (small, one-doc-per-user) balances collection.
+  // Users without a Balance document are naturally absent from the result.
+  const balanceDocsPromise: Promise<Array<{ user: unknown; tokenCredits?: number | null }>> = Balance.find(
+    {},
+    { user: 1, tokenCredits: 1 },
+  ).lean();
+
+  const [transactionAgg, agentUsageByUserAgg, balanceDocs] = await Promise.all([
+    transactionAggPromise,
+    agentUsageByUserAggPromise,
+    balanceDocsPromise,
+  ]);
 
   const byUser = transactionAgg[0]?.byUser || [];
   const byModelUser = transactionAgg[0]?.byModelUser || [];
+  const byUserTokens = transactionAgg[0]?.byUserTokens || [];
 
   // Look up display names for the agents present in the result so labels
   // match what the advanced tier emits for `librechat_agent_usage_count`.
@@ -177,6 +215,10 @@ export async function updateCardinalityMetrics(): Promise<void> {
     cardinalityGauges.transactionCostByUser.set({ id: labelFor(String(row._id)) }, row.cost);
   }
 
+  for (const row of byUserTokens) {
+    cardinalityGauges.transactionTokenSumByUser.set({ id: labelFor(String(row._id)) }, row.tokens);
+  }
+
   for (const row of byModelUser) {
     cardinalityGauges.transactionTokenSumByModelUser.set(
       { model: row._id.model, tokenType: row._id.tokenType, id: labelFor(String(row._id.user)) },
@@ -190,5 +232,9 @@ export async function updateCardinalityMetrics(): Promise<void> {
       continue;
     }
     cardinalityGauges.agentUsageByUserCount.set({ agent, id: labelFor(String(row._id.user)) }, row.count);
+  }
+
+  for (const row of balanceDocs) {
+    cardinalityGauges.balanceCreditsByUser.set({ id: labelFor(String(row.user)) }, row.tokenCredits ?? 0);
   }
 }

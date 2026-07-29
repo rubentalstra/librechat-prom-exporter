@@ -24,6 +24,19 @@ The repository ships a sample Grafana dashboard at [`librechat-exporter-dashboar
 3. Pick your Prometheus data source (the one configured to scrape the exporter — see [Prometheus & Grafana setup](./guides/prometheus-grafana)).
 4. Save.
 
+## Balance dashboard
+
+A second, focused dashboard — [`librechat-balance-dashboard.json`](https://github.com/rubentalstra/librechat-prom-exporter/blob/main/librechat-balance-dashboard.json) — visualizes user credit balances. Import it the same way as above.
+
+It shows:
+
+- **Balance records** — number of users with a balance (`librechat_balance_count`).
+- **Total outstanding credits** and **average credits per account** — derived from `librechat_balance_credits_by_email_domain`.
+- **Credits by email domain** — outstanding balance grouped by domain (always-on).
+- **Top users by credits** — the largest balances, only populated when `EMIT_PER_USER_METRICS=true`.
+
+All values are raw `tokenCredits` (1,000,000 tokenCredits = 1 USD).
+
 ## Screenshots
 
 ![Dashboard Overview](/img/dashboard/image_1.png)

@@ -115,7 +115,7 @@ The label is **stripped of trailing parentheticals** via regex (e.g. `"User map 
 
 Two env flags exist specifically to control Prometheus series count:
 
-- **`EMIT_PER_USER_METRICS=true`** enables three `email`-labeled gauges (one series per user — unbounded). Default off. The `*_by_email_domain` variants are bounded by company domains and stay on.
+- **`EMIT_PER_USER_METRICS=true`** enables four `id`-labeled gauges (one series per user — unbounded). Default off. The `*_by_email_domain` variants are bounded by company domains and stay on.
 - **`TENANT_ID=<id>`** installs schema-level pre-hooks (`src/metrics/tenantHooks.ts`) that inject `{ $match: { tenantId } }` into every `aggregate`, `find*`, and `count*` for every model. **Caveat:** `estimatedDocumentCount()` is tenant-blind by design (collection metadata, accepts no filter). The exporter avoids it; if you need a count, use `countDocuments({})` so tenant hooks apply.
 
 When you add a new metric that includes a user-level label, decide up front whether it goes behind `EMIT_PER_USER_METRICS` (per-user) or stays default-on (per-domain only). See [Adding a metric → Cardinality budget](./adding-a-metric#cardinality-budget) for the decision rule.

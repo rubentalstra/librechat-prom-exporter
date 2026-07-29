@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Per-user balance metric** `librechat_balance_credits_by_user{id}` (gated by `EMIT_PER_USER_METRICS`, cardinality tier) — each user's current balance in raw `tokenCredits`. Users without a balance record emit no series; a user with a zero-credit record emits `0`.
+- **Per-domain balance metric** `librechat_balance_credits_by_email_domain{email_domain}` (always-on, advanced tier) — total outstanding `tokenCredits` summed per user email domain.
+- **`librechat-balance-dashboard.json`** — a dedicated Grafana dashboard for balances (records, total / average outstanding credits, credits by domain, top users), documented on the [Grafana dashboard](https://rubentalstra.github.io/librechat-prom-exporter/docs/dashboard) page.
+
+### Fixed
+
+- **CVEs in transitive dependencies**, pinned via new `overrides` in `pnpm-workspace.yaml` (pnpm v11 no longer reads `pnpm.overrides` from `package.json`):
+  - `form-data` `4.0.5` → `4.0.6` — [GHSA-hmw2-7cc7-3qxx](https://github.com/advisories/GHSA-hmw2-7cc7-3qxx) (CRLF injection), pulled in transitively via `axios` (used by `librechat-data-provider`/`@librechat/data-schemas`); shipped in the production image.
+  - Docs-site (Docusaurus) build toolchain only, not shipped in the exporter's runtime image, but tripped `pnpm audit --prod --audit-level=high` in CI: `shell-quote` `1.8.3` → `1.9.0` ([GHSA-w7jw-789q-3m8p](https://github.com/advisories/GHSA-w7jw-789q-3m8p), critical), `serialize-javascript` `6.0.2` → `7.0.7` ([GHSA-5c6j-r48x-rmvq](https://github.com/advisories/GHSA-5c6j-r48x-rmvq)), `undici` `7.25.0` → `7.28.0` ([GHSA-vmh5-mc38-953g](https://github.com/advisories/GHSA-vmh5-mc38-953g), [GHSA-vxpw-j846-p89q](https://github.com/advisories/GHSA-vxpw-j846-p89q), [GHSA-hm92-r4w5-c3mj](https://github.com/advisories/GHSA-hm92-r4w5-c3mj)), `ws` `7.5.10`/`8.20.1` → `7.5.11`/`8.21.0` ([GHSA-96hv-2xvq-fx4p](https://github.com/advisories/GHSA-96hv-2xvq-fx4p), DoS via tiny fragments).
+
 ## [0.10.0] - 2026-05-22
 
 ### Added

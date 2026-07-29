@@ -1,6 +1,27 @@
 packages:
   - "website"
 
+# CVE remediation for transitive dependencies pnpm can't otherwise bump
+# (deep inside axios/@librechat deps or the website's Docusaurus toolchain).
+# Ranges are upper-bounded to the minimal patched version within the SAME
+# major line the CVE was found in, so pnpm can't opportunistically jump to
+# an unrelated newer major (bit us once: unbounded ">=" ranges resolved
+# undici and ws straight to their latest major instead of the nearest fix).
+# - form-data: GHSA-hmw2-7cc7-3qxx (CRLF injection), via axios>librechat-data-provider
+# - shell-quote: GHSA-w7jw-789q-3m8p (no newline escaping), via website>...>launch-editor
+# - serialize-javascript: GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags) — no
+#   patched 6.x exists, so this one does require the 6->7 major bump.
+# - undici: GHSA-vmh5-mc38-953g / GHSA-vxpw-j846-p89q / GHSA-hm92-r4w5-c3mj, via website>...>cheerio
+# - ws: GHSA-96hv-2xvq-fx4p (DoS via tiny fragments), two coexisting majors:
+#   webpack-dev-server needs v8.x, webpack-bundle-analyzer needs v7.x.
+overrides:
+  form-data: ">=4.0.6 <5.0.0"
+  shell-quote: ">=1.8.4 <2.0.0"
+  serialize-javascript: ">=7.0.3 <8.0.0"
+  undici: ">=7.28.0 <8.0.0"
+  webpack-dev-server>ws: ">=8.21.0 <9.0.0"
+  webpack-bundle-analyzer>ws: ">=7.5.11 <8.0.0"
+
 # Native postinstall scripts we trust:
 # - @swc/core: Speedy Web Compiler native binary (used by Docusaurus)
 # - esbuild: installs the platform binary (used by vitest + tsx)
