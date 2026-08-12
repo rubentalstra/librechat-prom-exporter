@@ -129,6 +129,17 @@ Source: `src/metrics/advancedMetrics.ts`. ~60 metrics grouped here.
 | `librechat_mcp_unique_users_by_tool_30d`     | gauge | `toolId`                 | Distinct users per MCP tool.          |
 | `librechat_mcp_tool_call_by_user_domain_30d` | gauge | `toolId`, `email_domain` | Per-tool, per-domain breakdown.       |
 
+### Web search
+
+Counts LibreChat `web_search` tool invocations recorded in message content parts (the Search badge / agent tool). Excludes provider-native server-side search (Anthropic/OpenAI `web_search` addParams), which is opaque to the database.
+
+| Metric                                  | Type  | Labels | Notes                                |
+| --------------------------------------- | ----- | ------ | ------------------------------------ |
+| `librechat_web_search_call_count`       | gauge | —      | Web search tool calls (all time).    |
+| `librechat_web_search_unique_users`     | gauge | —      | Distinct users (all time).           |
+| `librechat_web_search_call_count_30d`   | gauge | —      | Web search tool calls, last 30 days. |
+| `librechat_web_search_unique_users_30d` | gauge | —      | Distinct users, last 30 days.        |
+
 ### Files
 
 | Metric                                         | Type  | Labels         | Notes                                       |

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sumCreditsByEmailDomain } from "./advancedMetrics.js";
+import { extractWebSearchStats, sumCreditsByEmailDomain } from "./advancedMetrics.js";
 
 describe("sumCreditsByEmailDomain", () => {
   it("sums tokenCredits per email domain", () => {
@@ -42,5 +42,26 @@ describe("sumCreditsByEmailDomain", () => {
 
   it("returns an empty array when there are no balances", () => {
     expect(sumCreditsByEmailDomain([], new Map())).toEqual([]);
+  });
+});
+
+describe("extractWebSearchStats", () => {
+  it("maps populated total and uniqueUsers branches", () => {
+    const facetResult = [{ total: [{ count: 42 }], uniqueUsers: [{ count: 7 }] }];
+
+    expect(extractWebSearchStats(facetResult)).toEqual({ total: 42, uniqueUsers: 7 });
+  });
+
+  it("returns zeros when no web search calls match (empty branches)", () => {
+    expect(extractWebSearchStats([{ total: [], uniqueUsers: [] }])).toEqual({ total: 0, uniqueUsers: 0 });
+  });
+
+  it("tolerates an empty facet result array", () => {
+    expect(extractWebSearchStats([])).toEqual({ total: 0, uniqueUsers: 0 });
+  });
+
+  it("tolerates missing branches and undefined input", () => {
+    expect(extractWebSearchStats([{}])).toEqual({ total: 0, uniqueUsers: 0 });
+    expect(extractWebSearchStats(undefined)).toEqual({ total: 0, uniqueUsers: 0 });
   });
 });
