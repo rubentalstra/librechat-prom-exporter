@@ -44,7 +44,7 @@
   "packageManager": "pnpm@12.4.2",
   "dependencies": {
     "@librechat/data-schemas": "^0.0.51",
-    "compression": "^1.8.1",
+    "compression": "^1.8.2",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
