@@ -331,6 +331,26 @@ export const advancedGauges = {
     help: "Percentage of tool calls that are MCP in the last 30 days",
   }),
 
+  // Web search tool usage (LibreChat `web_search` tool invocations recorded in
+  // message content parts). Excludes provider-native server-side search
+  // (Anthropic/OpenAI addParams), which is opaque to the database.
+  webSearchCallCount: new client.Gauge({
+    name: "librechat_web_search_call_count",
+    help: "Total web search tool calls (all time)",
+  }),
+  webSearchUniqueUsers: new client.Gauge({
+    name: "librechat_web_search_unique_users",
+    help: "Unique users who used the web search tool (all time)",
+  }),
+  webSearchCallCount30d: new client.Gauge({
+    name: "librechat_web_search_call_count_30d",
+    help: "Web search tool calls in the last 30 days",
+  }),
+  webSearchUniqueUsers30d: new client.Gauge({
+    name: "librechat_web_search_unique_users_30d",
+    help: "Unique users who used the web search tool in the last 30 days",
+  }),
+
   // --- Activity & engagement ---
   messagesTotal24h: new client.Gauge({
     name: "librechat_messages_total_24h",
@@ -651,6 +671,21 @@ export function sumCreditsByEmailDomain(
     credits.set(domain, (credits.get(domain) || 0) + (balance.tokenCredits ?? 0));
   }
   return Array.from(credits.entries()).map(([domain, sum]) => ({ domain, credits: sum }));
+}
+
+/**
+ * Maps one `$facet` result with `total: [{ $count }]` and
+ * `uniqueUsers: [{ $group: "$user" }, { $count }]` branches into a plain
+ * `{ total, uniqueUsers }` pair. Tolerates an empty/missing facet result
+ * (no matching tool calls) by returning zeros. Used for the web search
+ * gauges from both the all-time and 30-day aggregations.
+ */
+export function extractWebSearchStats(facetResult: unknown): { total: number; uniqueUsers: number } {
+  const row = (facetResult as Array<Record<string, Array<{ count?: number }>>> | undefined)?.[0];
+  return {
+    total: row?.total?.[0]?.count ?? 0,
+    uniqueUsers: row?.uniqueUsers?.[0]?.count ?? 0,
+  };
 }
 
 export async function updateAdvancedMetrics(): Promise<void> {
@@ -1362,7 +1397,7 @@ export async function updateAdvancedMetrics(): Promise<void> {
     __mark("Parallelized: Feedback, Distinct Models, MCP (independent queries)");
 
     // --- Parallelized: Feedback, Distinct Models, MCP (independent queries) ---
-    const [feedbackByModel30dAgg, distinctModelsAgg, toolCallContentAgg] = await Promise.all([
+    const [feedbackByModel30dAgg, distinctModelsAgg, toolCallContentAgg, webSearchAllTimeAgg] = await Promise.all([
       // Feedback by model/agent (30d) — only assistant messages are eligible
       Message.aggregate([
         {
@@ -1419,9 +1454,42 @@ export async function updateAdvancedMetrics(): Promise<void> {
               { $group: { _id: "$user" } },
               { $count: "count" },
             ],
+            webSearchTotal: [{ $match: { toolName: "web_search" } }, { $count: "count" }],
+            webSearchUniqueUsers: [
+              { $match: { toolName: "web_search" } },
+              { $group: { _id: "$user" } },
+              { $count: "count" },
+            ],
           },
         },
       ]),
+      // Web search tool usage (all time). `web_search` invocations are
+      // recorded as message content parts, so this scans the (large,
+      // unbounded-by-date) messages collection; `allowDiskUse` keeps the
+      // $unwind off the wire memory limit. Runs in parallel with the 30d
+      // aggregation above rather than adding a serial round trip.
+      Message.aggregate(
+        [
+          { $match: { "content.type": "tool_call" } },
+          { $unwind: "$content" },
+          { $match: { "content.type": "tool_call" } },
+          {
+            $addFields: {
+              toolName: {
+                $ifNull: ["$content.tool_call.name", { $ifNull: ["$content.tool_call.function.name", "unknown"] }],
+              },
+            },
+          },
+          { $match: { toolName: "web_search" } },
+          {
+            $facet: {
+              total: [{ $count: "count" }],
+              uniqueUsers: [{ $group: { _id: "$user" } }, { $count: "count" }],
+            },
+          },
+        ],
+        { allowDiskUse: true },
+      ),
     ]);
 
     __mark("Feedback Percentage + Net Satisfaction by Model / Agent (30 days)");
@@ -1501,6 +1569,26 @@ export async function updateAdvancedMetrics(): Promise<void> {
 
     advancedGauges.mcpUniqueUserCount30d.set(mcpUsers);
     advancedGauges.mcpUtilizationPercent30d.set(toPercent(mcpTotal, totalToolCalls30d));
+
+    __mark("Web Search Usage Metrics");
+
+    // --- Web Search Usage Metrics ---
+    // 30d stats ride the shared toolCallContentAgg $facet (no extra scan);
+    // all-time stats come from the dedicated aggregation added to the same
+    // parallel batch. Both use the same branch shape (total + uniqueUsers),
+    // so a single helper maps them.
+    const webSearch30d = extractWebSearchStats([
+      {
+        total: toolCallContentAgg[0]?.webSearchTotal,
+        uniqueUsers: toolCallContentAgg[0]?.webSearchUniqueUsers,
+      },
+    ]);
+    advancedGauges.webSearchCallCount30d.set(webSearch30d.total);
+    advancedGauges.webSearchUniqueUsers30d.set(webSearch30d.uniqueUsers);
+
+    const webSearchAllTime = extractWebSearchStats(webSearchAllTimeAgg);
+    advancedGauges.webSearchCallCount.set(webSearchAllTime.total);
+    advancedGauges.webSearchUniqueUsers.set(webSearchAllTime.uniqueUsers);
 
     // ============================================================
     // === Extended metrics (Activity, Quality, Cost, Agents...) ===
